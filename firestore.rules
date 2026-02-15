@@ -1,0 +1,152 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper Functions ────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isApproved() {
+      return isSignedIn() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
+    }
+
+    // ─── Users ───────────────────────────────────
+    match /users/{userId} {
+      // Anyone signed in can read user profiles (for display names, ratings, etc.)
+      allow read: if isSignedIn();
+
+      // Users can create their own profile doc during registration
+      allow create: if isOwner(userId);
+
+      // Users can update their own profile (but NOT role or status)
+      allow update: if isOwner(userId) &&
+                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status']);
+
+      // Admins can update any user (for approval, suspension)
+      allow update: if isAdmin();
+
+      // No one can delete user documents
+      allow delete: if false;
+    }
+
+    // ─── Listings ────────────────────────────────
+    match /listings/{listingId} {
+      // All signed-in users can read listings
+      allow read: if isSignedIn();
+
+      // Only approved users can create listings
+      allow create: if isApproved() &&
+                       request.resource.data.hostUid == request.auth.uid;
+
+      // Only the host can update their own listing
+      allow update: if isSignedIn() &&
+                       resource.data.hostUid == request.auth.uid;
+
+      // Only the host or an admin can delete
+      allow delete: if isSignedIn() &&
+                       (resource.data.hostUid == request.auth.uid || isAdmin());
+    }
+
+    // ─── Jobs ────────────────────────────────────
+    match /jobs/{jobId} {
+      // Host and hauler of a job can read it; admins too
+      allow read: if isSignedIn() &&
+                     (resource.data.hostUid == request.auth.uid ||
+                      resource.data.haulerUid == request.auth.uid ||
+                      isAdmin());
+
+      // Available jobs (pending) can be read by approved haulers
+      allow read: if isApproved() &&
+                     resource.data.status == 'pending';
+
+      // Approved users can create jobs
+      allow create: if isApproved();
+
+      // Host or hauler of the job can update it
+      allow update: if isSignedIn() &&
+                       (resource.data.hostUid == request.auth.uid ||
+                        resource.data.haulerUid == request.auth.uid);
+
+      allow delete: if false;
+    }
+
+    // ─── Reviews ─────────────────────────────────
+    match /reviews/{reviewId} {
+      // Anyone signed in can read reviews
+      allow read: if isSignedIn();
+
+      // Signed-in users can create reviews (for their own jobs)
+      allow create: if isSignedIn() &&
+                       request.resource.data.reviewerUid == request.auth.uid;
+
+      // Reviews cannot be updated or deleted
+      allow update, delete: if false;
+    }
+
+    // ─── Billing ─────────────────────────────────
+    match /billing/{recordId} {
+      // Only host or hauler of the record can read
+      allow read: if isSignedIn() &&
+                     (resource.data.hostUid == request.auth.uid ||
+                      resource.data.haulerUid == request.auth.uid);
+
+      // Only the system/server should create billing records ideally,
+      // but for client-side: approved users can create
+      allow create: if isApproved();
+
+      // No client updates or deletes
+      allow update, delete: if false;
+    }
+
+    // ─── Chats ───────────────────────────────────
+    match /chats/{chatId} {
+      // Only participants can read/write
+      allow read: if isSignedIn() &&
+                     request.auth.uid in resource.data.participantUids;
+
+      // Signed-in users can create chats
+      allow create: if isSignedIn() &&
+                       request.auth.uid in request.resource.data.participantUids;
+
+      // Participants can update (last message)
+      allow update: if isSignedIn() &&
+                       request.auth.uid in resource.data.participantUids;
+
+      allow delete: if false;
+
+      // Messages subcollection
+      match /messages/{messageId} {
+        allow read: if isSignedIn() &&
+                       request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantUids;
+
+        allow create: if isSignedIn() &&
+                         request.resource.data.senderUid == request.auth.uid;
+
+        allow update, delete: if false;
+      }
+    }
+
+    // ─── Notification Preferences ────────────────
+    match /notification_preferences/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ─── Default deny ────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
