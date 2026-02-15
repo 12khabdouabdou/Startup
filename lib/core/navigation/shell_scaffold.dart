@@ -21,13 +21,6 @@ class ShellScaffold extends StatelessWidget {
 
     return SyncListener(
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(_getTitle(index)),
-          actions: const [
-            ConnectivityIndicator(),
-            SizedBox(width: 16),
-          ],
-        ),
         body: navigationShell,
         bottomNavigationBar: NavigationBar(
           selectedIndex: index,
@@ -55,27 +48,8 @@ class ShellScaffold extends StatelessWidget {
             ),
           ],
         ),
-        floatingActionButton: showFab && index == 0 // Show on Home tab primarily? Or all? Not specified. Usually Home/Feed.
-            ? FloatingActionButton(
-                onPressed: () {
-                  // TODO: Navigate to create listing
-                  context.push('/listings/create'); 
-                },
-                child: const Icon(Icons.add),
-              )
-            : null,
       ),
     );
-  }
-
-  String _getTitle(int index) {
-      switch (index) {
-        case 0: return 'FillExchange';
-        case 1: return 'Map';
-        case 2: return 'Activity';
-        case 3: return 'Profile';
-        default: return 'FillExchange';
-      }
   }
 
   void _onItemTapped(BuildContext context, int index) {
