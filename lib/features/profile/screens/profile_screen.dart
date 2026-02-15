@@ -112,7 +112,6 @@ class ProfileScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
-                ),
               ),
               if (user.uid.startsWith('mock-')) ...[
                 const SizedBox(height: 24),

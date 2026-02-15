@@ -5,6 +5,8 @@ import '../models/listing_model.dart';
 import '../repositories/listing_repository.dart';
 import '../widgets/listing_card.dart';
 import '../../notifications/repositories/notification_repository.dart';
+import '../../profile/providers/profile_provider.dart';
+import '../../../core/models/app_user.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
