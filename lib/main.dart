@@ -8,6 +8,9 @@ import 'app.dart';
 import 'firebase_options.dart';
 import 'core/services/offline_queue.dart';
 import 'core/services/notification_service.dart';
+import 'core/models/mock_data.dart';
+import 'core/providers/auth_provider.dart';
+import 'features/profile/providers/profile_provider.dart';
 
 /// Entry point for the FillExchange application.
 ///
@@ -35,16 +38,32 @@ void main() async {
 
   // Initialize FCM Notifications (Epic 5)
   final container = ProviderContainer();
-  runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: const FillExchangeApp(),
-    ),
-  );
+  // Mock Mode Toggle: Set to false to use real Firebase
+  const bool useMockData = true;
 
-  // Initialize FCM Notifications asynchronously (Epic 5)
-  // We do this AFTER runApp to avoid blocking the UI startup (AC-1 fix)
-  container.read(notificationServiceProvider).initialize().catchError((e) {
-    debugPrint('Error initializing notifications: $e');
-  });
+  if (useMockData) {
+    debugPrint('⚠️ Running in MOCK MODE - Bypassing Firebase Auth & Notifications');
+    runApp(
+      ProviderScope(
+        overrides: [
+          authStateProvider.overrideWith((ref) => Stream.value(MockData.firebaseUser)),
+          userDocProvider.overrideWith((ref) => Stream.value(MockData.appUser)),
+        ],
+        child: const FillExchangeApp(),
+      ),
+    );
+  } else {
+    runApp(
+      UncontrolledProviderScope(
+        container: container,
+        child: const FillExchangeApp(),
+      ),
+    );
+
+    // Initialize FCM Notifications asynchronously (Epic 5)
+    // We do this AFTER runApp to avoid blocking the UI startup (AC-1 fix)
+    container.read(notificationServiceProvider).initialize().catchError((e) {
+      debugPrint('Error initializing notifications: $e');
+    });
+  }
 }
