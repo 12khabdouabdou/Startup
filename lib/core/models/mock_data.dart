@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_user.dart';
 
 // Mock Firebase User class using noSuchMethod to avoid implementing all 50+ members
@@ -87,5 +88,4 @@ class MockData {
 }
 
 // Provider to hold the current mock user state
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 final mockUserProvider = StateProvider<AppUser>((ref) => MockData.haulerUser);
