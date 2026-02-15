@@ -53,10 +53,11 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'dummy-api-key',
-    appId: '1:1234567890:android:dummy-app-id',
-    messagingSenderId: '1234567890',
-    projectId: 'fillexchange',
-    storageBucket: 'fillexchange.appspot.com',
+    apiKey: 'AIzaSyB0tjIOTAsti4Dzj9zUwXqGXoDjqJq9ZRo',
+    appId: '1:121827454978:android:28d2b85723a2165d71771b',
+    messagingSenderId: '121827454978',
+    projectId: 'fillexhange',
+    storageBucket: 'fillexhange.firebasestorage.app',
   );
+
 }
