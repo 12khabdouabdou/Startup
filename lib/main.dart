@@ -35,13 +35,16 @@ void main() async {
 
   // Initialize FCM Notifications (Epic 5)
   final container = ProviderContainer();
-  final notificationService = container.read(notificationServiceProvider);
-  await notificationService.initialize();
-
   runApp(
     UncontrolledProviderScope(
       container: container,
       child: const FillExchangeApp(),
     ),
   );
+
+  // Initialize FCM Notifications asynchronously (Epic 5)
+  // We do this AFTER runApp to avoid blocking the UI startup (AC-1 fix)
+  container.read(notificationServiceProvider).initialize().catchError((e) {
+    debugPrint('Error initializing notifications: $e');
+  });
 }
