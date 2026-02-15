@@ -166,10 +166,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/listings/create'),
-        label: const Text('Post'),
-        icon: const Icon(Icons.add),
+      floatingActionButton: ref.watch(userDocProvider).when(
+        data: (user) => user?.role == UserRole.hauler
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () => context.push('/listings/create'),
+                label: const Text('Post'),
+                icon: const Icon(Icons.add),
+              ),
+        loading: () => null,
+        error: (_, __) => null,
       ),
     );
   }

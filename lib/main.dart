@@ -46,8 +46,11 @@ void main() async {
     runApp(
       ProviderScope(
         overrides: [
-          authStateProvider.overrideWith((ref) => Stream.value(MockData.firebaseUser)),
-          userDocProvider.overrideWith((ref) => Stream.value(MockData.appUser)),
+          authStateProvider.overrideWith((ref) {
+            final user = ref.watch(mockUserProvider);
+            return Stream.value(MockData.getFirebaseUser(user));
+          }),
+          userDocProvider.overrideWith((ref) => Stream.value(ref.watch(mockUserProvider))),
         ],
         child: const FillExchangeApp(),
       ),

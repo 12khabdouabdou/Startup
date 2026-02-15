@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../../auth/repositories/auth_repository.dart';
+import '../../../core/models/mock_data.dart';
+import '../../../core/models/app_user.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -110,13 +112,72 @@ class ProfileScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
+                ),
               ),
+              if (user.uid.startsWith('mock-')) ...[
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 8),
+                const Text('Debug Options', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: const Icon(Icons.people_alt_outlined, color: Colors.purple),
+                  title: const Text('Switch Mock Role', style: TextStyle(color: Colors.purple)),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.purple),
+                  tileColor: Colors.purple.withOpacity(0.05),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  onTap: () => _showRoleSwitcher(context, ref),
+                ),
+              ],
             ],
           ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, _) => Center(child: Text('Error: $err')),
+    );
+  }
+  void _showRoleSwitcher(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Select Mock Role', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.local_shipping),
+              title: const Text('Hauler'),
+              subtitle: const Text('View as a truck driver/owner'),
+              onTap: () {
+                ref.read(mockUserProvider.notifier).state = MockData.haulerUser;
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.landscape),
+              title: const Text('Excavator'),
+              subtitle: const Text('View as a site manager'),
+              onTap: () {
+                ref.read(mockUserProvider.notifier).state = MockData.excavatorUser;
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.business),
+              title: const Text('Developer'),
+              subtitle: const Text('View as a project developer'),
+              onTap: () {
+                ref.read(mockUserProvider.notifier).state = MockData.developerUser;
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
