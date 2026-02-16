@@ -5,7 +5,7 @@ import '../../../core/services/storage_service.dart';
 import '../../profile/repositories/profile_repository.dart';
 
 class VerificationService {
-  final RobustStorageService _storageService;
+  final StorageService _storageService;
   final ProfileRepository _profileService;
 
   VerificationService(this._storageService, this._profileService);

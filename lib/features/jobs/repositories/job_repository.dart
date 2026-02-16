@@ -1,72 +1,77 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/job_model.dart';
+import '../../auth/repositories/auth_repository.dart';
 
 class JobRepository {
-  final FirebaseFirestore _firestore;
+  final SupabaseClient _client;
 
-  JobRepository(this._firestore);
+  JobRepository(this._client);
 
   // ─── Create ──────────────────────────────────────
   Future<String> createJob(Job job) async {
-    final docRef = await _firestore.collection('jobs').add({
+    final response = await _client.from('jobs').insert({
       ...job.toMap(),
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-    return docRef.id;
+      'createdAt': DateTime.now().toIso8601String(),
+      'updatedAt': DateTime.now().toIso8601String(),
+    }).select().single();
+    return response['id'] as String;
   }
 
   // ─── Read ────────────────────────────────────────
   Stream<List<Job>> fetchAvailableJobs() {
-    return _firestore
-        .collection('jobs')
-        .where('status', isEqualTo: 'pending')
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snap) => snap.docs.map((d) => Job.fromMap(d.data(), d.id)).toList());
+    return _client
+        .from('jobs')
+        .stream(primaryKey: ['id'])
+        .eq('status', 'pending')
+        .order('createdAt', ascending: false)
+        .map((data) => data.map((json) => Job.fromMap(json, json['id'] as String)).toList());
   }
 
   Stream<List<Job>> fetchHaulerJobs(String haulerUid) {
-    return _firestore
-        .collection('jobs')
-        .where('haulerUid', isEqualTo: haulerUid)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snap) => snap.docs.map((d) => Job.fromMap(d.data(), d.id)).toList());
+    return _client
+        .from('jobs')
+        .stream(primaryKey: ['id'])
+        .eq('haulerUid', haulerUid)
+        .order('createdAt', ascending: false)
+        .map((data) => data.map((json) => Job.fromMap(json, json['id'] as String)).toList());
   }
 
   Stream<List<Job>> fetchHostJobs(String hostUid) {
-    return _firestore
-        .collection('jobs')
-        .where('hostUid', isEqualTo: hostUid)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snap) => snap.docs.map((d) => Job.fromMap(d.data(), d.id)).toList());
+    return _client
+        .from('jobs')
+        .stream(primaryKey: ['id'])
+        .eq('hostUid', hostUid)
+        .order('createdAt', ascending: false)
+        .map((data) => data.map((json) => Job.fromMap(json, json['id'] as String)).toList());
   }
 
   Stream<Job?> watchJob(String jobId) {
-    return _firestore.collection('jobs').doc(jobId).snapshots().map((snap) {
-      if (!snap.exists || snap.data() == null) return null;
-      return Job.fromMap(snap.data()!, snap.id);
-    });
+    return _client
+        .from('jobs')
+        .stream(primaryKey: ['id'])
+        .eq('id', jobId)
+        .map((data) {
+          if (data.isEmpty) return null;
+          return Job.fromMap(data.first, data.first['id'] as String);
+        });
   }
 
   // ─── Status Transitions ──────────────────────────
   Future<void> acceptJob(String jobId, String haulerUid, String haulerName) async {
-    await _firestore.collection('jobs').doc(jobId).update({
+    await _client.from('jobs').update({
       'haulerUid': haulerUid,
       'haulerName': haulerName,
       'status': JobStatus.accepted.name,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+      'updatedAt': DateTime.now().toIso8601String(),
+    }).eq('id', jobId);
   }
 
   Future<void> updateJobStatus(String jobId, JobStatus status) async {
-    await _firestore.collection('jobs').doc(jobId).update({
+    await _client.from('jobs').update({
       'status': status.name,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+      'updatedAt': DateTime.now().toIso8601String(),
+    }).eq('id', jobId);
   }
 
   Future<void> cancelJob(String jobId) async {
@@ -75,25 +80,25 @@ class JobRepository {
 
   // ─── Photo Verification ──────────────────────────
   Future<void> uploadPickupPhoto(String jobId, String photoUrl) async {
-    await _firestore.collection('jobs').doc(jobId).update({
+    await _client.from('jobs').update({
       'pickupPhotoUrl': photoUrl,
       'status': JobStatus.loaded.name,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+      'updatedAt': DateTime.now().toIso8601String(),
+    }).eq('id', jobId);
   }
 
   Future<void> uploadDropoffPhoto(String jobId, String photoUrl) async {
-    await _firestore.collection('jobs').doc(jobId).update({
+    await _client.from('jobs').update({
       'dropoffPhotoUrl': photoUrl,
       'status': JobStatus.completed.name,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+      'updatedAt': DateTime.now().toIso8601String(),
+    }).eq('id', jobId);
   }
 }
 
 // ─── Providers ───────────────────────────────────────
 final jobRepositoryProvider = Provider<JobRepository>((ref) {
-  return JobRepository(FirebaseFirestore.instance);
+  return JobRepository(Supabase.instance.client);
 });
 
 final availableJobsProvider = StreamProvider.autoDispose<List<Job>>((ref) {

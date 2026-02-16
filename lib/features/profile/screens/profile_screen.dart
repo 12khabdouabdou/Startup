@@ -66,7 +66,7 @@ class ProfileScreen extends ConsumerWidget {
 
               // Profile Info Cards
               _ProfileTile(icon: Icons.business, label: 'Company', value: user.companyName ?? 'N/A'),
-              _ProfileTile(icon: Icons.phone, label: 'Phone', value: user.phoneNumber ?? 'N/A'),
+              _ProfileTile(icon: Icons.phone, label: 'Phone', value: user.phone ?? 'N/A'),
               _ProfileTile(icon: Icons.verified_user, label: 'Status', value: user.status.name.toUpperCase()),
               if (user.fleetSize != null)
                 _ProfileTile(icon: Icons.local_shipping, label: 'Fleet Size', value: '${user.fleetSize}'),
@@ -113,7 +113,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (user.uid.startsWith('mock-')) ...[
+              if (user.id.startsWith('mock-')) ...[
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 8),

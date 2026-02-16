@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,19 +15,14 @@ final myListingsProvider = StreamProvider.autoDispose<List<Listing>>((ref) {
   final user = ref.watch(authRepositoryProvider).currentUser;
   if (user == null) return Stream.value([]);
 
-  return FirebaseFirestore.instance
-      .collection('listings')
-      .where('hostUid', isEqualTo: user.uid)
-      .orderBy('createdAt', descending: true)
-      .snapshots()
-      .map((snap) => snap.docs.map((d) => Listing.fromMap(d.data(), d.id)).toList());
+  return ref.watch(listingRepositoryProvider).fetchUserListings(user.id);
 });
 
 /// Provider: streams the hauler's assigned jobs
 final myJobsProvider = StreamProvider.autoDispose<List<Job>>((ref) {
   final user = ref.watch(authRepositoryProvider).currentUser;
   if (user == null) return Stream.value([]);
-  return ref.watch(jobRepositoryProvider).fetchHaulerJobs(user.uid);
+  return ref.watch(jobRepositoryProvider).fetchHaulerJobs(user.id);
 });
 
 class ActivityScreen extends ConsumerWidget {
@@ -167,7 +162,8 @@ class _HostActivityView extends ConsumerWidget {
                 );
               },
               onDismissed: (_) {
-                FirebaseFirestore.instance.collection('listings').doc(listing.id).update({'status': 'archived'});
+                // Use Repository to archive
+                ref.read(listingRepositoryProvider).archiveListing(listing.id);
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing archived')));
               },
               child: ListingCard(listing: listing, onTap: () {}),

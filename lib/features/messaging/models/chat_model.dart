@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatMessage {
   final String id;
@@ -21,8 +21,8 @@ class ChatMessage {
       chatId: data['chatId'] as String? ?? '',
       senderUid: data['senderUid'] as String? ?? '',
       text: data['text'] as String? ?? '',
-      sentAt: (data['sentAt'] is Timestamp)
-          ? (data['sentAt'] as Timestamp).toDate()
+      sentAt: (data['sentAt'] is String)
+          ? DateTime.parse(data['sentAt'] as String)
           : DateTime.now(),
     );
   }
@@ -31,7 +31,7 @@ class ChatMessage {
     'chatId': chatId,
     'senderUid': senderUid,
     'text': text,
-    'sentAt': sentAt,
+    'sentAt': sentAt.toIso8601String(),
   };
 }
 
@@ -57,8 +57,8 @@ class Chat {
       participantUids: List<String>.from(data['participantUids'] ?? []),
       listingId: data['listingId'] as String?,
       lastMessage: data['lastMessage'] as String?,
-      lastMessageAt: (data['lastMessageAt'] is Timestamp)
-          ? (data['lastMessageAt'] as Timestamp).toDate()
+      lastMessageAt: (data['lastMessageAt'] is String)
+          ? DateTime.parse(data['lastMessageAt'] as String)
           : null,
     );
   }

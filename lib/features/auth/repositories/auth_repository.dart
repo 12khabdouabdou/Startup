@@ -1,33 +1,44 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AuthRepository {
-  final FirebaseAuth _auth;
+  final GoTrueClient _auth;
 
   AuthRepository(this._auth);
 
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  Stream<AuthState> get authStateChanges => _auth.onAuthStateChange;
 
   User? get currentUser => _auth.currentUser;
 
-  Future<void> verifyPhoneNumber({
+  Future<void> signInWithOtp({
     required String phoneNumber,
-    required void Function(PhoneAuthCredential) verificationCompleted,
-    required void Function(FirebaseAuthException) verificationFailed,
-    required void Function(String, int?) codeSent,
-    required void Function(String) codeAutoRetrievalTimeout,
   }) async {
-    await _auth.verifyPhoneNumber(
-      phoneNumber: phoneNumber,
-      verificationCompleted: verificationCompleted,
-      verificationFailed: verificationFailed,
-      codeSent: codeSent,
-      codeAutoRetrievalTimeout: codeAutoRetrievalTimeout,
-    );
+    await _auth.signInWithOtp(phone: phoneNumber);
   }
 
-  Future<UserCredential> signInWithCredential(AuthCredential credential) async {
-    return _auth.signInWithCredential(credential);
+  Future<AuthResponse> verifyOtp({
+    required String phoneNumber,
+    required String token,
+  }) async {
+    return await _auth.verifyOTP(
+      phone: phoneNumber,
+      token: token,
+      type: OtpType.sms,
+    );
+  }
+  
+  Future<AuthResponse> signInWithPassword({
+    required String email,
+    required String password,
+  }) async {
+    return await _auth.signInWithPassword(email: email, password: password);
+  }
+
+  Future<AuthResponse> signUpWithPassword({
+    required String email,
+    required String password,
+  }) async {
+    return await _auth.signUp(email: email, password: password);
   }
 
   Future<void> signOut() async {
@@ -36,5 +47,5 @@ class AuthRepository {
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository(FirebaseAuth.instance);
+  return AuthRepository(Supabase.instance.client.auth);
 });

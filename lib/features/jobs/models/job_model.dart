@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/models/geo_point.dart';
 
 enum JobStatus {
   pending,    // Job created, waiting for hauler
@@ -52,6 +52,16 @@ class Job {
   });
 
   factory Job.fromMap(Map<String, dynamic> data, String id) {
+    GeoPoint? parseGeo(dynamic loc) {
+      if (loc is Map) {
+        return GeoPoint(
+          (loc['latitude'] as num).toDouble(),
+          (loc['longitude'] as num).toDouble(),
+        );
+      }
+      return null;
+    }
+
     return Job(
       id: id,
       listingId: data['listingId'] as String? ?? '',
@@ -63,24 +73,29 @@ class Job {
         orElse: () => JobStatus.pending,
       ),
       pickupAddress: data['pickupAddress'] as String?,
-      pickupLocation: data['pickupLocation'] as GeoPoint?,
+      pickupLocation: parseGeo(data['pickupLocation']),
       dropoffAddress: data['dropoffAddress'] as String?,
-      dropoffLocation: data['dropoffLocation'] as GeoPoint?,
+      dropoffLocation: parseGeo(data['dropoffLocation']),
       pickupPhotoUrl: data['pickupPhotoUrl'] as String?,
       dropoffPhotoUrl: data['dropoffPhotoUrl'] as String?,
       notes: data['notes'] as String?,
       quantity: (data['quantity'] as num?)?.toDouble(),
       material: data['material'] as String?,
-      createdAt: (data['createdAt'] is Timestamp)
-          ? (data['createdAt'] as Timestamp).toDate()
+      createdAt: (data['createdAt'] is String)
+          ? DateTime.parse(data['createdAt'] as String)
           : DateTime.now(),
-      updatedAt: (data['updatedAt'] is Timestamp)
-          ? (data['updatedAt'] as Timestamp).toDate()
+      updatedAt: (data['updatedAt'] is String)
+          ? DateTime.parse(data['updatedAt'] as String)
           : null,
     );
   }
 
   Map<String, dynamic> toMap() {
+    Map<String, double>? geoToMap(GeoPoint? p) {
+      if (p == null) return null;
+      return {'latitude': p.latitude, 'longitude': p.longitude};
+    }
+
     return {
       'listingId': listingId,
       'hostUid': hostUid,
@@ -88,16 +103,16 @@ class Job {
       'haulerName': haulerName,
       'status': status.name,
       'pickupAddress': pickupAddress,
-      'pickupLocation': pickupLocation,
+      'pickupLocation': geoToMap(pickupLocation),
       'dropoffAddress': dropoffAddress,
-      'dropoffLocation': dropoffLocation,
+      'dropoffLocation': geoToMap(dropoffLocation),
       'pickupPhotoUrl': pickupPhotoUrl,
       'dropoffPhotoUrl': dropoffPhotoUrl,
       'notes': notes,
       'quantity': quantity,
       'material': material,
-      'createdAt': createdAt,
-      'updatedAt': updatedAt,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 

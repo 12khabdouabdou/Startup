@@ -43,8 +43,8 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       if (user == null) throw Exception('No authenticated user found');
 
       final appUser = AppUser(
-        uid: user.uid,
-        phoneNumber: user.phoneNumber,
+        uid: user.id,
+        phoneNumber: user.phone,
         displayName: _nameController.text.trim(),
         companyName: _companyController.text.trim(),
         role: widget.role!,

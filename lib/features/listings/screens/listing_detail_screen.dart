@@ -149,7 +149,7 @@ class ListingDetailScreen extends ConsumerWidget {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        final currentUid = ref.read(authRepositoryProvider).currentUser?.uid;
+                        final currentUid = ref.read(authRepositoryProvider).currentUser?.id;
                         if (currentUid == null) return;
                         if (currentUid == listing.hostUid) {
                           ScaffoldMessenger.of(context).showSnackBar(
