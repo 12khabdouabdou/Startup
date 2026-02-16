@@ -23,7 +23,7 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
   }
 
   Future<void> _loadSettings() async {
-    final uid = ref.read(authRepositoryProvider).currentUser?.uid;
+    final uid = ref.read(authRepositoryProvider).currentUser?.id;
     if (uid == null) return;
 
     final settings = await ref.read(notificationServiceProvider).getSettings(uid);
@@ -38,7 +38,7 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
   }
 
   Future<void> _saveSettings() async {
-    final uid = ref.read(authRepositoryProvider).currentUser?.uid;
+    final uid = ref.read(authRepositoryProvider).currentUser?.id;
     if (uid == null) return;
 
     await ref.read(notificationServiceProvider).updateSettings(uid, {

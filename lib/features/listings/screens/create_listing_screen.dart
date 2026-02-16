@@ -65,7 +65,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       final storage = ref.read(storageServiceProvider);
       List<String> photoUrls = [];
       for (var file in _selectedPhotos) {
-        final path = 'listings/${user.uid}/${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+        final path = 'listings/${user.id}/${DateTime.now().millisecondsSinceEpoch}_${file.name}';
         final url = await storage.uploadFile(localPath: file.path, remotePath: path);
         if (url != null) photoUrls.add(url);
       }

@@ -1,37 +1,36 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/app_user.dart';
 
 class AdminRepository {
-  final FirebaseFirestore _firestore;
+  final SupabaseClient _client;
 
-  AdminRepository(this._firestore);
+  AdminRepository(this._client);
   
   // Creates a Stream of all pending users
   Stream<List<AppUser>> fetchPendingUsers() {
-    return _firestore
-        .collection('users')
-        .where('status', isEqualTo: 'pending')
-        .snapshots()
-        .map((snapshot) {
-            return snapshot.docs.map((doc) {
-                // To reuse fromMap, we need to handle potential missing fields or use AppUser.fromMap
-                return AppUser.fromMap(doc.data(), doc.id);
+    return _client
+        .from('users')
+        .stream(primaryKey: ['uid'])
+        .eq('status', 'pending')
+        .map((data) {
+            return data.map((json) {
+                return AppUser.fromMap(json, json['uid'] as String);
             }).toList();
         });
   }
 
   Future<void> approveUser(String uid) async {
-    await _firestore.collection('users').doc(uid).update({'status': 'approved'});
+    await _client.from('users').update({'status': 'approved'}).eq('uid', uid);
   }
   
   Future<void> rejectUser(String uid) async {
-    await _firestore.collection('users').doc(uid).update({'status': 'rejected'});
+    await _client.from('users').update({'status': 'rejected'}).eq('uid', uid);
   }
 }
 
 final adminRepositoryProvider = Provider<AdminRepository>((ref) {
-  return AdminRepository(FirebaseFirestore.instance);
+  return AdminRepository(Supabase.instance.client);
 });
 
 final pendingUsersProvider = StreamProvider.autoDispose<List<AppUser>>((ref) {

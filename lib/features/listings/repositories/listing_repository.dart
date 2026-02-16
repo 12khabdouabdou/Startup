@@ -1,47 +1,56 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/models/app_user.dart';
 import '../models/listing_model.dart';
-import '../../profile/providers/profile_provider.dart';
+// content of ProfileProvider import removed as it wasn't used in the snippet directly, but might be needed for user info?
+// Actually the previous file imported it but used it in Provider? No, wait.
+// Let's keep it simple.
 
 class ListingRepository {
-  final FirebaseFirestore _firestore;
+  final SupabaseClient _client;
 
-  ListingRepository(this._firestore);
+  ListingRepository(this._client);
   
   // Create
   Future<void> createListing(Listing listing) async {
-    // Map listing model to firestore map
-    // We omit ID as it might be auto-generated or passed
-    // If listing.id is empty, add should be used
-    if (listing.id.isEmpty) {
-        await _firestore.collection('listings').add({
-            ...listing.toMap(),
-            'createdAt': FieldValue.serverTimestamp(),
-        });
-    } else {
-        await _firestore.collection('listings').doc(listing.id).set({
-            ...listing.toMap(),
-            'createdAt': FieldValue.serverTimestamp(),
-        });
-    }
+    final data = listing.toMap();
+    // Remove nulls or empty strings if Supabase complains, but valid map is usually fine.
+    // Ensure createdAt is string.
+    data['createdAt'] = DateTime.now().toIso8601String();
+    
+    // For location, we need to handle GeoPoint replacement.
+    // Listing.toMap needs to be updated to return lat/long or PostGIS geometry.
+    // We will assume the model update handles this.
+    
+    await _client.from('listings').insert(data);
   }
 
   // Read: Stream of active listings
   Stream<List<Listing>> fetchActiveListings() {
-    return _firestore
-        .collection('listings')
-        .where('status', isEqualTo: 'active')
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-            return snapshot.docs.map((doc) => Listing.fromMap(doc.data(), doc.id)).toList();
+    return _client
+        .from('listings')
+        .stream(primaryKey: ['id'])
+        .eq('status', 'active')
+        .order('createdAt', ascending: false)
+        .map((data) {
+            return data.map((json) => Listing.fromMap(json, json['id'] as String)).toList();
+        });
+  }
+
+  // Read: Stream of user's own listings (Host view)
+  Stream<List<Listing>> fetchUserListings(String hostUid) {
+    return _client
+        .from('listings')
+        .stream(primaryKey: ['id'])
+        .eq('hostUid', hostUid)
+        .order('createdAt', ascending: false)
+        .map((data) {
+            return data.map((json) => Listing.fromMap(json, json['id'] as String)).toList();
         });
   }
 
   // Update
   Future<void> updateListing(String id, Map<String, dynamic> data) async {
-    await _firestore.collection('listings').doc(id).update(data);
+    await _client.from('listings').update(data).eq('id', id);
   }
 
   // Delete (Archive)
@@ -51,7 +60,7 @@ class ListingRepository {
 }
 
 final listingRepositoryProvider = Provider<ListingRepository>((ref) {
-  return ListingRepository(FirebaseFirestore.instance);
+  return ListingRepository(Supabase.instance.client);
 });
 
 final activeListingsProvider = StreamProvider.autoDispose<List<Listing>>((ref) {

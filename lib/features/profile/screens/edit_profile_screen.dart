@@ -27,7 +27,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     if (_initialized) return;
     _nameController = TextEditingController(text: user.displayName ?? '');
     _companyController = TextEditingController(text: user.companyName ?? '');
-    _phoneController = TextEditingController(text: user.phoneNumber ?? '');
+    _phoneController = TextEditingController(text: user.phone ?? '');
     _fleetSizeController = TextEditingController(text: user.fleetSize?.toString() ?? '');
     _initialized = true;
   }

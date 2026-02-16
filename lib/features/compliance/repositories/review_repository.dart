@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class Review {
@@ -28,8 +28,8 @@ class Review {
       revieweeUid: data['revieweeUid'] as String? ?? '',
       rating: (data['rating'] as num?)?.toDouble() ?? 0.0,
       comment: data['comment'] as String?,
-      createdAt: (data['createdAt'] is Timestamp)
-          ? (data['createdAt'] as Timestamp).toDate()
+      createdAt: (data['createdAt'] is String)
+          ? DateTime.parse(data['createdAt'] as String)
           : DateTime.now(),
     );
   }
@@ -40,20 +40,20 @@ class Review {
     'revieweeUid': revieweeUid,
     'rating': rating,
     'comment': comment,
-    'createdAt': createdAt,
+    'createdAt': createdAt.toIso8601String(),
   };
 }
 
 class ReviewRepository {
-  final FirebaseFirestore _firestore;
-  ReviewRepository(this._firestore);
+  final SupabaseClient _client;
+  ReviewRepository(this._client);
 
   /// Submit a review after a completed job
   Future<void> submitReview(Review review) async {
     // Save review
-    await _firestore.collection('reviews').add({
+    await _client.from('reviews').insert({
       ...review.toMap(),
-      'createdAt': FieldValue.serverTimestamp(),
+      'createdAt': DateTime.now().toIso8601String(),
     });
 
     // Update the reviewee's aggregate rating
@@ -62,49 +62,49 @@ class ReviewRepository {
 
   /// Fetch reviews for a user
   Stream<List<Review>> fetchReviewsForUser(String uid) {
-    return _firestore
-        .collection('reviews')
-        .where('revieweeUid', isEqualTo: uid)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snap) => snap.docs.map((d) => Review.fromMap(d.data(), d.id)).toList());
+    return _client
+        .from('reviews')
+        .stream(primaryKey: ['id'])
+        .eq('revieweeUid', uid)
+        .order('createdAt', ascending: false)
+        .map((data) => data.map((json) => Review.fromMap(json, json['id'] as String)).toList());
   }
 
   /// Check if a review already exists for this job by this reviewer
   Future<bool> hasReviewed(String jobId, String reviewerUid) async {
-    final snap = await _firestore
-        .collection('reviews')
-        .where('jobId', isEqualTo: jobId)
-        .where('reviewerUid', isEqualTo: reviewerUid)
-        .limit(1)
-        .get();
-    return snap.docs.isNotEmpty;
+    final data = await _client
+        .from('reviews')
+        .select()
+        .eq('jobId', jobId)
+        .eq('reviewerUid', reviewerUid)
+        .limit(1);
+    return (data as List).isNotEmpty;
   }
 
   /// Recalculate and store aggregate rating on user document
   Future<void> _updateUserRating(String uid) async {
-    final reviews = await _firestore
-        .collection('reviews')
-        .where('revieweeUid', isEqualTo: uid)
-        .get();
+    final reviews = await _client
+        .from('reviews')
+        .select()
+        .eq('revieweeUid', uid);
 
-    if (reviews.docs.isEmpty) return;
+    if ((reviews as List).isEmpty) return;
 
     double total = 0;
-    for (var doc in reviews.docs) {
-      total += (doc.data()['rating'] as num?)?.toDouble() ?? 0;
+    for (var doc in reviews) {
+      total += (doc['rating'] as num?)?.toDouble() ?? 0;
     }
-    final avg = total / reviews.docs.length;
+    final avg = total / reviews.length;
 
-    await _firestore.collection('users').doc(uid).set({
+    await _client.from('users').update({
       'averageRating': avg,
-      'totalReviews': reviews.docs.length,
-    }, SetOptions(merge: true));
+      'totalReviews': reviews.length,
+    }).eq('uid', uid);
   }
 }
 
 // ─── Providers ───────────────────────────────────────
 
 final reviewRepositoryProvider = Provider<ReviewRepository>((ref) {
-  return ReviewRepository(FirebaseFirestore.instance);
+  return ReviewRepository(Supabase.instance.client);
 });

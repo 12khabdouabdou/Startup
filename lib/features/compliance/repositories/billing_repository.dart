@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/repositories/auth_repository.dart';
 
@@ -39,8 +39,8 @@ class BillingRecord {
       material: data['material'] as String? ?? '',
       quantity: (data['quantity'] as num?)?.toDouble() ?? 0.0,
       status: data['status'] as String? ?? 'pending',
-      createdAt: (data['createdAt'] is Timestamp)
-          ? (data['createdAt'] as Timestamp).toDate()
+      createdAt: (data['createdAt'] is String)
+          ? DateTime.parse(data['createdAt'] as String)
           : DateTime.now(),
     );
   }
@@ -54,78 +54,58 @@ class BillingRecord {
     'material': material,
     'quantity': quantity,
     'status': status,
-    'createdAt': createdAt,
+    'createdAt': createdAt.toIso8601String(),
   };
 }
 
 class BillingRepository {
-  final FirebaseFirestore _firestore;
-  BillingRepository(this._firestore);
+  final SupabaseClient _client;
+  BillingRepository(this._client);
 
   Future<String> createRecord(BillingRecord record) async {
-    final ref = await _firestore.collection('billing').add({
+    final response = await _client.from('billing').insert({
       ...record.toMap(),
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-    return ref.id;
+      'createdAt': DateTime.now().toIso8601String(),
+    }).select().single();
+    return response['id'] as String;
   }
 
   /// Fetch all billing records for a user (as host or hauler)
   Stream<List<BillingRecord>> fetchUserBilling(String uid) {
-    // We query both hostUid and haulerUid matches
-    // Firestore doesn't support OR queries in a single query,
-    // so we'll merge two streams
-    final hostStream = _firestore
-        .collection('billing')
-        .where('hostUid', isEqualTo: uid)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((s) => s.docs.map((d) => BillingRecord.fromMap(d.data(), d.id)).toList());
-
-    final haulerStream = _firestore
-        .collection('billing')
-        .where('haulerUid', isEqualTo: uid)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((s) => s.docs.map((d) => BillingRecord.fromMap(d.data(), d.id)).toList());
-
-    // Merge both streams
-    return hostStream.asyncExpand((hostRecords) {
-      return haulerStream.map((haulerRecords) {
-        final allRecords = <BillingRecord>{...hostRecords, ...haulerRecords};
-        final sorted = allRecords.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        return sorted;
-      });
-    });
+    // Supabase OR query for hostUid OR haulerUid
+    return _client
+        .from('billing')
+        .stream(primaryKey: ['id'])
+        .or('hostUid.eq.$uid,haulerUid.eq.$uid')
+        .order('createdAt', ascending: false)
+        .map((data) => data.map((json) => BillingRecord.fromMap(json, json['id'] as String)).toList());
   }
 
   /// Calculate weekly summary
   Future<Map<String, dynamic>> getWeeklySummary(String uid) async {
     final now = DateTime.now();
     final weekAgo = now.subtract(const Duration(days: 7));
+    final weekAgoIso = weekAgo.toIso8601String();
 
-    final hostSnap = await _firestore
-        .collection('billing')
-        .where('hostUid', isEqualTo: uid)
-        .where('createdAt', isGreaterThan: Timestamp.fromDate(weekAgo))
-        .get();
-
-    final haulerSnap = await _firestore
-        .collection('billing')
-        .where('haulerUid', isEqualTo: uid)
-        .where('createdAt', isGreaterThan: Timestamp.fromDate(weekAgo))
-        .get();
+    // Fetch records for calculations (client-side aggregation)
+    // Could be optimized with SQL functions later
+    final records = await _client
+        .from('billing')
+        .select()
+        .or('hostUid.eq.$uid,haulerUid.eq.$uid')
+        .gt('createdAt', weekAgoIso);
 
     double totalSpent = 0;
     double totalEarned = 0;
     int jobCount = 0;
 
-    for (var doc in hostSnap.docs) {
-      totalSpent += (doc.data()['amount'] as num?)?.toDouble() ?? 0;
-      jobCount++;
-    }
-    for (var doc in haulerSnap.docs) {
-      totalEarned += (doc.data()['amount'] as num?)?.toDouble() ?? 0;
+    for (var doc in (records as List)) {
+      final amount = (doc['amount'] as num?)?.toDouble() ?? 0;
+      if (doc['hostUid'] == uid) {
+        totalSpent += amount;
+      } else if (doc['haulerUid'] == uid) {
+        totalEarned += amount;
+      }
       jobCount++;
     }
 
@@ -142,7 +122,7 @@ class BillingRepository {
 // ─── Providers ───────────────────────────────────────
 
 final billingRepositoryProvider = Provider<BillingRepository>((ref) {
-  return BillingRepository(FirebaseFirestore.instance);
+  return BillingRepository(Supabase.instance.client);
 });
 
 final userBillingProvider = StreamProvider.autoDispose<List<BillingRecord>>((ref) {

@@ -44,9 +44,11 @@ class AppUser {
         (e) => e.name == (data['status'] as String? ?? 'pending'),
         orElse: () => UserStatus.pending,
       ),
-      createdAt: (data['createdAt'] is int)
-          ? DateTime.fromMillisecondsSinceEpoch(data['createdAt'] as int)
-          : DateTime.now(), // Firestore timestamp parsing deferred
+      createdAt: (data['createdAt'] is String)
+          ? DateTime.parse(data['createdAt'] as String)
+          : (data['createdAt'] is int)
+              ? DateTime.fromMillisecondsSinceEpoch(data['createdAt'] as int)
+              : DateTime.now(),
       fcmToken: data['fcmToken'] as String?,
       licenseUrl: data['licenseUrl'] as String?,
       fleetSize: data['fleetSize'] as int?,

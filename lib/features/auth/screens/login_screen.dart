@@ -76,7 +76,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
-    final isCodeSent = authState.verificationId != null;
+    final isCodeSent = authState.status == AuthStatus.codeSent;
     final isLoading = authState.status == AuthStatus.loading;
 
     // Side Effects

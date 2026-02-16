@@ -11,7 +11,7 @@ class ChatListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final chatsAsync = ref.watch(userChatsProvider);
-    final currentUid = ref.watch(authRepositoryProvider).currentUser?.uid ?? '';
+    final currentUid = ref.watch(authRepositoryProvider).currentUser?.id ?? '';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Messages')),
