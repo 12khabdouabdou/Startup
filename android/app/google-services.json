@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "121827454978",
+    "project_id": "fillexhange",
+    "storage_bucket": "fillexhange.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:121827454978:android:28d2b85723a2165d71771b",
+        "android_client_info": {
+          "package_name": "com.fillexchange.fill_exchange"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0tjIOTAsti4Dzj9zUwXqGXoDjqJq9ZRo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,4 +1,18 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Removed for Supabase migration
+class GeoPoint {
+  final double latitude;
+  final double longitude;
+  const GeoPoint(this.latitude, this.longitude);
+  
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is GeoPoint && other.latitude == latitude && other.longitude == longitude;
+  }
+
+  @override
+  int get hashCode => latitude.hashCode ^ longitude.hashCode;
+}
 
 enum ListingType { offering, needing }
 enum FillMaterial { cleanFill, topsoil, gravel, clay, mixed, other }
@@ -39,6 +53,19 @@ class Listing {
   });
 
   factory Listing.fromMap(Map<String, dynamic> data, String id) {
+    // Handle location: generic map or check for lat/long keys if we flatten it
+    // For now assuming it's stored as jsonb or we extract it
+    // Start with basic map check
+    GeoPoint? loc;
+    if (data['location'] != null) {
+      if (data['location'] is Map) {
+         final l = data['location'];
+         if (l['latitude'] != null && l['longitude'] != null) {
+             loc = GeoPoint(l['latitude'], l['longitude']);
+         }
+      }
+    }
+
     return Listing(
       id: id,
       hostUid: data['hostUid'] as String,
@@ -59,14 +86,14 @@ class Listing {
       currency: data['currency'] as String? ?? 'USD',
       description: data['description'] as String? ?? '',
       photos: (data['photos'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
-      location: data['location'] as GeoPoint?,
+      location: loc,
       address: data['address'] as String?,
       status: ListingStatus.values.firstWhere(
         (e) => e.name == (data['status'] as String? ?? 'active'),
         orElse: () => ListingStatus.active,
       ),
-      createdAt: (data['createdAt'] is Timestamp)
-          ? (data['createdAt'] as Timestamp).toDate()
+      createdAt: (data['createdAt'] is String)
+          ? DateTime.parse(data['createdAt'] as String)
           : DateTime.now(),
     );
   }
@@ -82,10 +109,18 @@ class Listing {
       'currency': currency,
       'description': description,
       'photos': photos,
-      'location': location, // GeoPoint serializes automatically
+      // Store location as JSONB for now or flattened
+      'location': location != null ? {'latitude': location!.latitude, 'longitude': location!.longitude} : null,
       'address': address,
       'status': status.name,
-      'createdAt': createdAt, // Timestamp serializes automatically if FieldValue not used here, but specific DateTime object is converted by SDK usually. Better to use FieldValue.serverTimestamp() for creation but for model -> map, DateTime is okay if converted.
+      // createdAt handled by repository for new items usually, but included here
+       'createdAt': createdAt.toIso8601String(),
     };
   }
 }
+
+// Simple GeoPoint replacement class if we remove cloud_firestore dependency entirely
+// But wait, Listing model imported cloud_firestore. We need to remove that import too.
+// I will create a local GeoPoint class or use latlong2 LatLng.
+// Let's check imports in the next step. I'll define a simple class here or use LatLng.
+// StartLine 41 of original file.

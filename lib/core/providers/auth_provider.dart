@@ -1,9 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Provides the stream of user authentication state changes.
 final authStateProvider = StreamProvider<User?>((ref) {
-  return FirebaseAuth.instance.authStateChanges();
+  return Supabase.instance.client.auth.onAuthStateChange.map((event) => event.session?.user);
 });
 
 /// Provides boolean authentication status.

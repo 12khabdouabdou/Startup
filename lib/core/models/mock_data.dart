@@ -1,31 +1,22 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_user.dart';
 
-// Mock Firebase User class using noSuchMethod to avoid implementing all 50+ members
-class MockFirebaseUser implements User {
-  @override
-  final String uid;
-  @override
-  final String? email;
-  @override
-  final String? displayName;
-  @override
-  final String? phoneNumber;
-  @override
-  final String? photoURL;
-
-  MockFirebaseUser({
-    required this.uid,
-    this.email,
-    this.displayName,
-    this.phoneNumber,
-    this.photoURL,
-  });
-
-  // Handle all other members dynamically (they will throw if called, which is fine for mocks)
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+// Helper to create a Supabase User for mocking
+User createMockSupabaseUser({
+  required String uid,
+  required String email,
+  String? phone,
+}) {
+  return User(
+    id: uid,
+    appMetadata: {},
+    userMetadata: {},
+    aud: 'authenticated',
+    email: email,
+    phone: phone,
+    createdAt: DateTime.now().toIso8601String(),
+  );
 }
 
 // Static mock data
@@ -77,12 +68,11 @@ class MockData {
   // Default to Hauler
   static AppUser get appUser => haulerUser;
 
-  static User getFirebaseUser(AppUser user) {
-    return MockFirebaseUser(
+  static User getSupabaseUser(AppUser user) {
+    return createMockSupabaseUser(
       uid: user.uid,
       email: 'test-${user.role.name}@fillexchange.com',
-      phoneNumber: user.phoneNumber,
-      displayName: user.displayName,
+      phone: user.phoneNumber,
     );
   }
 }
