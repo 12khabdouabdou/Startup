@@ -39,7 +39,7 @@ void main() async {
   // Initialize FCM Notifications (Epic 5)
   final container = ProviderContainer();
   // Mock Mode Toggle: Set to false to use real Firebase
-  const bool useMockData = true;
+  const bool useMockData = false;
 
   if (useMockData) {
     debugPrint('⚠️ Running in MOCK MODE - Bypassing Firebase Auth & Notifications');

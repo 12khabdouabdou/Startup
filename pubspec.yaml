@@ -34,7 +34,8 @@ dependencies:
   geocoding: ^3.0.0
 
   # Maps
-  google_maps_flutter: ^2.10.0
+  flutter_map: ^7.0.0
+  latlong2: ^0.9.1
   geoflutterfire_plus: ^0.0.18
 
   # Local Storage
