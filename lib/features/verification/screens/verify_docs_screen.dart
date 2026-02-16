@@ -33,7 +33,7 @@ class _VerifyDocsScreenState extends ConsumerState<VerifyDocsScreen> {
       final user = ref.read(authRepositoryProvider).currentUser;
       if (user == null) throw Exception('Not authenticated');
 
-      await ref.read(verificationServiceProvider).uploadLicense(user.uid, _image!);
+      await ref.read(verificationServiceProvider).uploadLicense(user.id, _image!);
       
       setState(() => _isSubmitted = true);
     } catch (e) {

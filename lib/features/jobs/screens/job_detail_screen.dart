@@ -28,7 +28,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
       final profile = ref.read(userDocProvider).valueOrNull;
       await ref.read(jobRepositoryProvider).acceptJob(
         job.id,
-        user.uid,
+        user.id,
         profile?.displayName ?? 'Hauler',
       );
     } catch (e) {

@@ -36,6 +36,18 @@ class ListingRepository {
         });
   }
 
+  // Read: Stream of user's own listings (Host view)
+  Stream<List<Listing>> fetchUserListings(String hostUid) {
+    return _client
+        .from('listings')
+        .stream(primaryKey: ['id'])
+        .eq('hostUid', hostUid)
+        .order('createdAt', ascending: false)
+        .map((data) {
+            return data.map((json) => Listing.fromMap(json, json['id'] as String)).toList();
+        });
+  }
+
   // Update
   Future<void> updateListing(String id, Map<String, dynamic> data) async {
     await _client.from('listings').update(data).eq('id', id);

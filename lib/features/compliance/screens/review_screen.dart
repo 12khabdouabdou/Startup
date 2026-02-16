@@ -33,14 +33,14 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   }
 
   Future<void> _checkExisting() async {
-    final uid = ref.read(authRepositoryProvider).currentUser?.uid;
+    final uid = ref.read(authRepositoryProvider).currentUser?.id;
     if (uid == null) return;
     final exists = await ref.read(reviewRepositoryProvider).hasReviewed(widget.jobId, uid);
     if (mounted) setState(() => _alreadyReviewed = exists);
   }
 
   Future<void> _submitReview() async {
-    final uid = ref.read(authRepositoryProvider).currentUser?.uid;
+    final uid = ref.read(authRepositoryProvider).currentUser?.id;
     if (uid == null) return;
 
     setState(() => _isLoading = true);

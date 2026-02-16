@@ -20,9 +20,9 @@ class _UserApprovalScreenState extends ConsumerState<UserApprovalScreen> {
     final repo = ref.read(adminRepositoryProvider);
     try {
       if (approve) {
-        await repo.approveUser(widget.user.uid);
+        await repo.approveUser(widget.user.id);
       } else {
-        await repo.rejectUser(widget.user.uid);
+        await repo.rejectUser(widget.user.id);
       }
       if (mounted) context.pop();
     } catch (e) {

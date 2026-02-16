@@ -40,7 +40,7 @@ void main() async {
         overrides: [
           authStateProvider.overrideWith((ref) {
             final user = ref.watch(mockUserProvider);
-            return Stream.value(MockData.getFirebaseUser(user)); // TODO: Migrating to Supabase User
+            return Stream.value(MockData.getSupabaseUser(user));
           }),
           userDocProvider.overrideWith((ref) => Stream.value(ref.watch(mockUserProvider))),
         ],

@@ -9,7 +9,7 @@ final userDocProvider = StreamProvider.autoDispose<AppUser?>((ref) {
   return authState.when(
     data: (user) {
       if (user == null) return Stream.value(null);
-      return ref.watch(profileRepositoryProvider).getUser(user.uid);
+      return ref.watch(profileRepositoryProvider).getUser(user.id);
     },
     loading: () => const Stream.empty(),
     error: (_, __) => const Stream.empty(),

@@ -21,12 +21,14 @@ User createMockSupabaseUser({
 
 // Static mock data
 class MockData {
+  /*
   static final firebaseUser = MockFirebaseUser(
     uid: 'mock-user-123',
     email: 'test@fillexchange.com',
     phoneNumber: '+15551234567',
     displayName: 'Mock Hauler',
   );
+  */
 
   static final haulerUser = AppUser(
     uid: 'mock-hauler-123',

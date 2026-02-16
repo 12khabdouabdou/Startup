@@ -22,7 +22,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
   }
 
   Future<void> _loadSummary() async {
-    final uid = ref.read(authRepositoryProvider).currentUser?.uid;
+    final uid = ref.read(authRepositoryProvider).currentUser?.id;
     if (uid == null) return;
     final summary = await ref.read(billingRepositoryProvider).getWeeklySummary(uid);
     if (mounted) setState(() { _summary = summary; _loadingSummary = false; });
@@ -113,7 +113,7 @@ class _BillingScreenState extends ConsumerState<BillingScreen> {
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final record = records[index];
-                    final isExpense = record.hostUid == ref.read(authRepositoryProvider).currentUser?.uid;
+                    final isExpense = record.hostUid == ref.read(authRepositoryProvider).currentUser?.id;
 
                     return ListTile(
                       leading: CircleAvatar(

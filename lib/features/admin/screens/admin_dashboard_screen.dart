@@ -24,9 +24,9 @@ class AdminDashboardScreen extends ConsumerWidget {
               return ListTile(
                 leading: CircleAvatar(child: Text(user.role.name[0].toUpperCase())),
                 title: Text(user.displayName ?? 'Unknown User'),
-                subtitle: Text('${user.role.name} • ${user.phoneNumber}'),
+                subtitle: Text('${user.role.name} • ${user.phone}'),
                 onTap: () {
-                  context.push('/admin/user/${user.uid}', extra: user);
+                  context.push('/admin/user/${user.id}', extra: user);
                 },
               );
             },
