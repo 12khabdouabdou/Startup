@@ -87,7 +87,7 @@ final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
 });
 
 final userNotificationsProvider = StreamProvider.autoDispose<List<AppNotification>>((ref) {
-  final uid = ref.watch(authRepositoryProvider).currentUser?.uid;
+  final uid = ref.watch(authRepositoryProvider).currentUser?.id;
   if (uid == null) return Stream.value([]);
   return ref.watch(notificationRepositoryProvider).watchNotifications(uid);
 });

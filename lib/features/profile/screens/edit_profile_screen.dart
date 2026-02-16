@@ -35,7 +35,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final uid = ref.read(authRepositoryProvider).currentUser?.uid;
+    final uid = ref.read(authRepositoryProvider).currentUser?.id;
     if (uid == null) return;
 
     setState(() => _isLoading = true);

@@ -15,6 +15,10 @@ class AppUser {
   final double rating;
   final int reviewCount;
 
+  // Getters for compatibility
+  String get id => uid;
+  String? get phone => phoneNumber;
+
   const AppUser({
     required this.uid,
     this.phoneNumber,

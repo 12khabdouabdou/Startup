@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../listings/models/listing_model.dart';
 import '../../listings/widgets/listing_card.dart';
+import '../../listings/repositories/listing_repository.dart';
 import '../../jobs/models/job_model.dart';
 import '../../jobs/repositories/job_repository.dart';
 import '../../auth/repositories/auth_repository.dart';

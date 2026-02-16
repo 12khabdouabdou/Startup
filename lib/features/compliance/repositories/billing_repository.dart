@@ -71,14 +71,14 @@ class BillingRepository {
   }
 
   /// Fetch all billing records for a user (as host or hauler)
-  Stream<List<BillingRecord>> fetchUserBilling(String uid) {
-    // Supabase OR query for hostUid OR haulerUid
-    return _client
+  Future<List<BillingRecord>> fetchUserBilling(String uid) async {
+    final response = await _client
         .from('billing')
-        .stream(primaryKey: ['id'])
+        .select()
         .or('hostUid.eq.$uid,haulerUid.eq.$uid')
-        .order('createdAt', ascending: false)
-        .map((data) => data.map((json) => BillingRecord.fromMap(json, json['id'] as String)).toList());
+        .order('createdAt', ascending: false);
+    
+    return (response as List).map((json) => BillingRecord.fromMap(json, json['id'] as String)).toList();
   }
 
   /// Calculate weekly summary
@@ -125,8 +125,8 @@ final billingRepositoryProvider = Provider<BillingRepository>((ref) {
   return BillingRepository(Supabase.instance.client);
 });
 
-final userBillingProvider = StreamProvider.autoDispose<List<BillingRecord>>((ref) {
-  final uid = ref.watch(authRepositoryProvider).currentUser?.uid;
-  if (uid == null) return Stream.value([]);
+final userBillingProvider = FutureProvider.autoDispose<List<BillingRecord>>((ref) async {
+  final uid = ref.watch(authRepositoryProvider).currentUser?.id;
+  if (uid == null) return [];
   return ref.watch(billingRepositoryProvider).fetchUserBilling(uid);
 });

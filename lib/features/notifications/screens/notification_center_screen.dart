@@ -19,7 +19,7 @@ class NotificationCenterScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () {
-              final uid = ref.read(authRepositoryProvider).currentUser?.uid;
+              final uid = ref.read(authRepositoryProvider).currentUser?.id;
               if (uid != null) {
                 ref.read(notificationRepositoryProvider).markAllAsRead(uid);
               }
