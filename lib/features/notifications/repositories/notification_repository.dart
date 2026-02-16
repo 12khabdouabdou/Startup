@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/repositories/auth_repository.dart';
 
@@ -29,42 +29,37 @@ class AppNotification {
       body: data['body'] as String? ?? '',
       route: data['route'] as String?,
       isRead: data['isRead'] as bool? ?? false,
-      createdAt: (data['createdAt'] is Timestamp)
-          ? (data['createdAt'] as Timestamp).toDate()
+      createdAt: (data['createdAt'] is String)
+          ? DateTime.parse(data['createdAt'] as String)
           : DateTime.now(),
     );
   }
 }
 
 class NotificationRepository {
-  final FirebaseFirestore _firestore;
-  NotificationRepository(this._firestore);
+  final SupabaseClient _client;
+  NotificationRepository(this._client);
 
   Stream<List<AppNotification>> watchNotifications(String uid) {
-    return _firestore
-        .collection('notifications')
-        .where('userId', isEqualTo: uid)
-        .orderBy('createdAt', descending: true)
+    return _client
+        .from('notifications')
+        .stream(primaryKey: ['id'])
+        .eq('userId', uid)
+        .order('createdAt', ascending: false)
         .limit(50)
-        .snapshots()
-        .map((snap) => snap.docs.map((d) => AppNotification.fromMap(d.data(), d.id)).toList());
+        .map((data) => data.map((json) => AppNotification.fromMap(json, json['id'] as String)).toList());
   }
 
   Future<void> markAsRead(String notificationId) async {
-    await _firestore.collection('notifications').doc(notificationId).update({'isRead': true});
+    await _client.from('notifications').update({'isRead': true}).eq('id', notificationId);
   }
 
   Future<void> markAllAsRead(String uid) async {
-    final batch = _firestore.batch();
-    final unread = await _firestore
-        .collection('notifications')
-        .where('userId', isEqualTo: uid)
-        .where('isRead', isEqualTo: false)
-        .get();
-    for (var doc in unread.docs) {
-      batch.update(doc.reference, {'isRead': true});
-    }
-    await batch.commit();
+    await _client
+        .from('notifications')
+        .update({'isRead': true})
+        .eq('userId', uid)
+        .eq('isRead', false);
   }
 
   /// Create a local notification (for server-side, use Cloud Functions)
@@ -74,13 +69,13 @@ class NotificationRepository {
     required String body,
     String? route,
   }) async {
-    await _firestore.collection('notifications').add({
+    await _client.from('notifications').insert({
       'userId': userId,
       'title': title,
       'body': body,
       'route': route,
       'isRead': false,
-      'createdAt': FieldValue.serverTimestamp(),
+      'createdAt': DateTime.now().toIso8601String(),
     });
   }
 }
@@ -88,7 +83,7 @@ class NotificationRepository {
 // ─── Providers ───────────────────────────────────
 
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
-  return NotificationRepository(FirebaseFirestore.instance);
+  return NotificationRepository(Supabase.instance.client);
 });
 
 final userNotificationsProvider = StreamProvider.autoDispose<List<AppNotification>>((ref) {

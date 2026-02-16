@@ -23,8 +23,8 @@ class ProfileRepository {
   Future<void> createUser(AppUser user) async {
     // Upsert to handle potential race conditions or re-auths
     await _client.from('users').upsert({
-      'uid': user.uid, // Supabase usually needs explicit ID if not auto-generated
-      'phoneNumber': user.phoneNumber,
+      'uid': user.id, // Supabase usually needs explicit ID if not auto-generated
+      'phoneNumber': user.phone,
       'displayName': user.displayName,
       'companyName': user.companyName,
       'role': user.role.name,
