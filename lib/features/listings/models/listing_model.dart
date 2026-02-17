@@ -46,6 +46,8 @@ class Listing {
     if (data['location'] != null) {
       if (data['location'] is Map) {
          final l = data['location'];
+         // PostGIS / GeoJSON returns coordinates usually
+         // or if we simply stored a map
          if (l['latitude'] != null && l['longitude'] != null) {
              loc = GeoPoint(l['latitude'], l['longitude']);
          }
@@ -54,13 +56,13 @@ class Listing {
 
     return Listing(
       id: id,
-      hostUid: data['hostUid'] as String,
+      hostUid: (data['owner_id'] ?? data['hostUid']) as String, // Support both for safety, prefer owner_id
       type: ListingType.values.firstWhere(
         (e) => e.name == (data['type'] as String? ?? 'offering'),
         orElse: () => ListingType.offering,
       ),
       material: FillMaterial.values.firstWhere(
-        (e) => e.name == (data['material'] as String? ?? 'other'),
+        (e) => e.name == (data['material'] as String? ?? 'other'), // material is text
         orElse: () => FillMaterial.other,
       ),
       quantity: (data['quantity'] as num?)?.toDouble() ?? 0.0,
@@ -78,15 +80,17 @@ class Listing {
         (e) => e.name == (data['status'] as String? ?? 'active'),
         orElse: () => ListingStatus.active,
       ),
-      createdAt: (data['createdAt'] is String)
-          ? DateTime.parse(data['createdAt'] as String)
-          : DateTime.now(),
+      createdAt: (data['created_at'] is String)
+          ? DateTime.parse(data['created_at'] as String)
+          : (data['createdAt'] is String) // Fallback
+              ? DateTime.parse(data['createdAt'] as String)
+              : DateTime.now(),
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'hostUid': hostUid,
+      'owner_id': hostUid, // Mapped to owner_id
       'type': type.name,
       'material': material.name,
       'quantity': quantity,
@@ -99,8 +103,7 @@ class Listing {
       'location': location != null ? {'latitude': location!.latitude, 'longitude': location!.longitude} : null,
       'address': address,
       'status': status.name,
-      // createdAt handled by repository for new items usually, but included here
-       'createdAt': createdAt.toIso8601String(),
+      'created_at': createdAt.toIso8601String(), // Mapped to created_at
     };
   }
 }

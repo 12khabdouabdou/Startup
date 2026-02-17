@@ -13,9 +13,8 @@ class ListingRepository {
   // Create
   Future<void> createListing(Listing listing) async {
     final data = listing.toMap();
-    // Remove nulls or empty strings if Supabase complains, but valid map is usually fine.
-    // Ensure createdAt is string.
-    data['createdAt'] = DateTime.now().toIso8601String();
+    // data['created_at'] is already set by toMap. 
+    // We should NOT set 'createdAt' (camelCase) as it doesn't exist in DB.
     
     // For location, we need to handle GeoPoint replacement.
     // Listing.toMap needs to be updated to return lat/long or PostGIS geometry.
@@ -30,7 +29,8 @@ class ListingRepository {
         .from('listings')
         .stream(primaryKey: ['id'])
         .eq('status', 'active')
-        .order('createdAt', ascending: false)
+        // Fix: Use snake_case created_at
+        .order('created_at', ascending: false)
         .map((data) {
             return data.map((json) => Listing.fromMap(json, json['id'] as String)).toList();
         });
@@ -41,8 +41,9 @@ class ListingRepository {
     return _client
         .from('listings')
         .stream(primaryKey: ['id'])
-        .eq('hostUid', hostUid)
-        .order('createdAt', ascending: false)
+        // Fix: Use snake_case owner_id
+        .eq('owner_id', hostUid)
+        .order('created_at', ascending: false)
         .map((data) {
             return data.map((json) => Listing.fromMap(json, json['id'] as String)).toList();
         });

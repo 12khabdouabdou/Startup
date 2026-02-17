@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../repositories/admin_repository.dart';
 
+import '../../auth/repositories/auth_repository.dart';
+
 class AdminDashboardScreen extends ConsumerWidget {
   const AdminDashboardScreen({super.key});
 
@@ -11,7 +13,16 @@ class AdminDashboardScreen extends ConsumerWidget {
     final pendingUsersAsync = ref.watch(pendingUsersProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Admin Dashboard')),
+      appBar: AppBar(
+        title: const Text('Admin Dashboard'),
+        actions: [
+          IconButton(
+            onPressed: () => ref.read(authRepositoryProvider).signOut(),
+            icon: const Icon(Icons.logout),
+            tooltip: 'Sign Out',
+          ),
+        ],
+      ),
       body: pendingUsersAsync.when(
         data: (users) {
           if (users.isEmpty) {

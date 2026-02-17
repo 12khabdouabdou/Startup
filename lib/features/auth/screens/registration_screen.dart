@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/models/app_user.dart';
 import '../../profile/repositories/profile_repository.dart';
+import '../../profile/providers/profile_provider.dart';
 import '../repositories/auth_repository.dart';
 
 class RegistrationScreen extends ConsumerStatefulWidget {
@@ -56,6 +57,11 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
       );
 
       await ref.read(profileRepositoryProvider).createUser(appUser);
+
+      // Force refresh of userDocProvider and wait for the new user doc to be loaded
+      // This prevents the AppRouter from redirecting back to RoleSelection because it thinks userDoc is null
+      ref.invalidate(userDocProvider);
+      await ref.read(userDocProvider.future);
 
       if (mounted) {
         // Router will also pick this up, but manual push is safe
