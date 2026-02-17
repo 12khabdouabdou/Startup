@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/listing_model.dart';
+import '../repositories/listing_repository.dart';
 import '../../auth/repositories/auth_repository.dart';
 import '../../messaging/repositories/chat_repository.dart';
 
