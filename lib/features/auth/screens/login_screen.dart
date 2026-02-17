@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_controller.dart';
 import '../../../core/utils/logger.dart';
 
+enum AuthMethod { phone, email }
+enum EmailMode { signIn, signUp }
+
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -14,6 +17,13 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _phoneController = TextEditingController();
   final _otpController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  
+  AuthMethod _authMethod = AuthMethod.phone;
+  EmailMode _emailMode = EmailMode.signIn;
+  bool _obscurePassword = true;
+
   Timer? _timer;
   int _secondsRemaining = 0;
   bool _canResend = false;
@@ -22,6 +32,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void dispose() {
     _phoneController.dispose();
     _otpController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     _timer?.cancel();
     super.dispose();
   }
@@ -73,6 +85,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _submitPhone();
   }
 
+  void _submitEmail() {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) return;
+    // Basic validation
+    if (!email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid email'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+    if (password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password must be at least 6 characters'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
+    log.i('[LOGIN] Submitting Email Auth: $_emailMode');
+    if (_emailMode == EmailMode.signIn) {
+      ref.read(authControllerProvider.notifier).signInWithEmail(email, password);
+    } else {
+      ref.read(authControllerProvider.notifier).signUpWithEmail(email, password);
+    }
+  }
+
+  void _toggleAuthMethod() {
+    setState(() {
+      _authMethod = _authMethod == AuthMethod.phone ? AuthMethod.email : AuthMethod.phone;
+      // Reset controllers when switching? Maybe not needed for UX persistence
+    });
+  }
+
+  void _toggleEmailMode() {
+    setState(() {
+      _emailMode = _emailMode == EmailMode.signIn ? EmailMode.signUp : EmailMode.signIn;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
@@ -106,12 +158,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: 48),
               
-              if (!isCodeSent) _buildPhoneInput(isLoading),
+              if (!isCodeSent) ...[
+                // Auth Method Selector
+                if (!isLoading)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildMethodChip('Phone', AuthMethod.phone),
+                      const SizedBox(width: 16),
+                      _buildMethodChip('Email', AuthMethod.email),
+                    ],
+                  ),
+                const SizedBox(height: 32),
+
+                if (_authMethod == AuthMethod.phone) _buildPhoneInput(isLoading),
+                if (_authMethod == AuthMethod.email) _buildEmailInput(isLoading),
+              ],
               if (isCodeSent) _buildOtpInput(isLoading),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMethodChip(String label, AuthMethod method) {
+    final isSelected = _authMethod == method;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        if (selected) setState(() => _authMethod = method);
+      },
     );
   }
 
@@ -202,6 +280,62 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ref.read(authControllerProvider.notifier).reset();
           },
           child: const Text('Change Number'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmailInput(bool isLoading) {
+    final isSignIn = _emailMode == EmailMode.signIn;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          isSignIn ? 'Sign In' : 'Create Account',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(
+            labelText: 'Email',
+            hintText: 'you@example.com',
+            border: OutlineInputBorder(),
+          ),
+          enabled: !isLoading,
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _passwordController,
+          obscureText: _obscurePassword,
+          decoration: InputDecoration(
+            labelText: 'Password',
+            border: const OutlineInputBorder(),
+            suffixIcon: IconButton(
+              icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+            ),
+          ),
+          enabled: !isLoading,
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: isLoading ? null : _submitEmail,
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          child: isLoading 
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : Text(isSignIn ? 'Sign In' : 'Sign Up'),
+        ),
+        const SizedBox(height: 16),
+        TextButton(
+          onPressed: isLoading ? null : _toggleEmailMode,
+          child: Text(isSignIn 
+            ? 'Don\'t have an account? Sign Up' 
+            : 'Already have an account? Sign In'
+          ),
         ),
       ],
     );
