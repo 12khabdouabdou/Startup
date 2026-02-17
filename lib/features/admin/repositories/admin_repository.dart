@@ -21,11 +21,11 @@ class AdminRepository {
   }
 
   Future<void> approveUser(String uid) async {
-    await _client.from('users').update({'status': 'approved'}).eq('uid', uid);
+    await _client.rpc('approve_user', params: {'target_uid': uid});
   }
   
   Future<void> rejectUser(String uid) async {
-    await _client.from('users').update({'status': 'rejected'}).eq('uid', uid);
+    await _client.rpc('reject_user', params: {'target_uid': uid});
   }
 }
 

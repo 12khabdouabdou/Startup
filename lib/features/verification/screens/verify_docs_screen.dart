@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/verification_service.dart';
 import '../../auth/repositories/auth_repository.dart';
+import '../../profile/providers/profile_provider.dart';
 
 class VerifyDocsScreen extends ConsumerStatefulWidget {
   const VerifyDocsScreen({super.key});
