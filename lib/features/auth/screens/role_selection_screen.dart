@@ -33,7 +33,7 @@ class RoleSelectionScreen extends StatelessWidget {
                 description: 'I have dirt to move.',
                 icon: Icons.landscape,
                 color: Colors.brown,
-                onTap: () => context.push('/register', extra: UserRole.excavator),
+                onTap: () => context.push('/auth/register', extra: UserRole.excavator),
               ),
               const SizedBox(height: 16),
               _RoleCard(
@@ -41,7 +41,7 @@ class RoleSelectionScreen extends StatelessWidget {
                 description: 'I need clean fill.',
                 icon: Icons.business,
                 color: Colors.blue,
-                onTap: () => context.push('/register', extra: UserRole.developer),
+                onTap: () => context.push('/auth/register', extra: UserRole.developer),
               ),
               const SizedBox(height: 16),
               _RoleCard(
@@ -49,7 +49,7 @@ class RoleSelectionScreen extends StatelessWidget {
                 description: 'I transport materials.',
                 icon: Icons.local_shipping,
                 color: Colors.orange,
-                onTap: () => context.push('/register', extra: UserRole.hauler),
+                onTap: () => context.push('/auth/register', extra: UserRole.hauler),
               ),
             ],
           ),
