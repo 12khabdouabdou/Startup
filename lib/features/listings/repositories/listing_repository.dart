@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../auth/repositories/auth_repository.dart';
 import '../models/listing_model.dart';
 // content of ProfileProvider import removed as it wasn't used in the snippet directly, but might be needed for user info?
 // Actually the previous file imported it but used it in Provider? No, wait.
@@ -67,4 +68,10 @@ final listingRepositoryProvider = Provider<ListingRepository>((ref) {
 final activeListingsProvider = StreamProvider.autoDispose<List<Listing>>((ref) {
   final repo = ref.watch(listingRepositoryProvider);
   return repo.fetchActiveListings();
+});
+
+final myListingsProvider = StreamProvider.autoDispose<List<Listing>>((ref) {
+  final user = ref.watch(authRepositoryProvider).currentUser;
+  if (user == null) return const Stream.empty();
+  return ref.watch(listingRepositoryProvider).fetchUserListings(user.id);
 });

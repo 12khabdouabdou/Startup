@@ -54,65 +54,81 @@ class Job {
   factory Job.fromMap(Map<String, dynamic> data, String id) {
     GeoPoint? parseGeo(dynamic loc) {
       if (loc is Map) {
-        return GeoPoint(
-          (loc['latitude'] as num).toDouble(),
-          (loc['longitude'] as num).toDouble(),
-        );
+         if (loc['type'] == 'Point' && loc['coordinates'] is List) {
+             final coords = loc['coordinates'] as List;
+             if (coords.length >= 2) {
+                 return GeoPoint(coords[1].toDouble(), coords[0].toDouble());
+             }
+         }
+         // Fallback
+         if (loc['latitude'] != null) {
+            return GeoPoint(
+              (loc['latitude'] as num).toDouble(),
+              (loc['longitude'] as num).toDouble(),
+            );
+         }
       }
       return null;
     }
 
     return Job(
       id: id,
-      listingId: data['listingId'] as String? ?? '',
-      hostUid: data['hostUid'] as String? ?? '',
-      haulerUid: data['haulerUid'] as String?,
-      haulerName: data['haulerName'] as String?,
+      listingId: (data['listing_id'] ?? data['listingId']) as String? ?? '',
+      hostUid: (data['host_uid'] ?? data['hostUid']) as String? ?? '',
+      haulerUid: (data['hauler_uid'] ?? data['haulerUid']) as String?,
+      haulerName: (data['hauler_name'] ?? data['haulerName']) as String?,
       status: JobStatus.values.firstWhere(
         (e) => e.name == (data['status'] as String? ?? 'pending'),
         orElse: () => JobStatus.pending,
       ),
-      pickupAddress: data['pickupAddress'] as String?,
-      pickupLocation: parseGeo(data['pickupLocation']),
-      dropoffAddress: data['dropoffAddress'] as String?,
-      dropoffLocation: parseGeo(data['dropoffLocation']),
-      pickupPhotoUrl: data['pickupPhotoUrl'] as String?,
-      dropoffPhotoUrl: data['dropoffPhotoUrl'] as String?,
+      pickupAddress: (data['pickup_address'] ?? data['pickupAddress']) as String?,
+      pickupLocation: parseGeo((data['pickup_location'] ?? data['pickupLocation'])),
+      dropoffAddress: (data['dropoff_address'] ?? data['dropoffAddress']) as String?,
+      dropoffLocation: parseGeo((data['dropoff_location'] ?? data['dropoffLocation'])),
+      pickupPhotoUrl: (data['pickup_photo_url'] ?? data['pickupPhotoUrl']) as String?,
+      dropoffPhotoUrl: (data['dropoff_photo_url'] ?? data['dropoffPhotoUrl']) as String?,
       notes: data['notes'] as String?,
       quantity: (data['quantity'] as num?)?.toDouble(),
       material: data['material'] as String?,
-      createdAt: (data['createdAt'] is String)
-          ? DateTime.parse(data['createdAt'] as String)
-          : DateTime.now(),
-      updatedAt: (data['updatedAt'] is String)
-          ? DateTime.parse(data['updatedAt'] as String)
-          : null,
+      createdAt: (data['created_at'] is String)
+          ? DateTime.parse(data['created_at'] as String)
+          : (data['createdAt'] is String)
+              ? DateTime.parse(data['createdAt'] as String)
+              : DateTime.now(),
+      updatedAt: (data['updated_at'] is String)
+          ? DateTime.parse(data['updated_at'] as String)
+          : (data['updatedAt'] is String)
+              ? DateTime.parse(data['updatedAt'] as String)
+              : null,
     );
   }
 
   Map<String, dynamic> toMap() {
-    Map<String, double>? geoToMap(GeoPoint? p) {
+    Map<String, dynamic>? geoToMap(GeoPoint? p) {
       if (p == null) return null;
-      return {'latitude': p.latitude, 'longitude': p.longitude};
+      return {
+        'type': 'Point',
+        'coordinates': [p.longitude, p.latitude]
+      };
     }
 
     return {
-      'listingId': listingId,
-      'hostUid': hostUid,
-      'haulerUid': haulerUid,
-      'haulerName': haulerName,
+      'listing_id': listingId,
+      'host_uid': hostUid,
+      'hauler_uid': haulerUid,
+      'hauler_name': haulerName,
       'status': status.name,
-      'pickupAddress': pickupAddress,
-      'pickupLocation': geoToMap(pickupLocation),
-      'dropoffAddress': dropoffAddress,
-      'dropoffLocation': geoToMap(dropoffLocation),
-      'pickupPhotoUrl': pickupPhotoUrl,
-      'dropoffPhotoUrl': dropoffPhotoUrl,
+      'pickup_address': pickupAddress,
+      'pickup_location': geoToMap(pickupLocation),
+      'dropoff_address': dropoffAddress,
+      'dropoff_location': geoToMap(dropoffLocation),
+      'pickup_photo_url': pickupPhotoUrl,
+      'dropoff_photo_url': dropoffPhotoUrl,
       'notes': notes,
       'quantity': quantity,
       'material': material,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
     };
   }
 

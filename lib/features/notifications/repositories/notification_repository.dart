@@ -24,13 +24,13 @@ class AppNotification {
   factory AppNotification.fromMap(Map<String, dynamic> data, String id) {
     return AppNotification(
       id: id,
-      userId: data['userId'] as String? ?? '',
+      userId: data['user_id'] as String? ?? '',
       title: data['title'] as String? ?? '',
       body: data['body'] as String? ?? '',
       route: data['route'] as String?,
-      isRead: data['isRead'] as bool? ?? false,
-      createdAt: (data['createdAt'] is String)
-          ? DateTime.parse(data['createdAt'] as String)
+      isRead: data['is_read'] as bool? ?? false,
+      createdAt: (data['created_at'] is String)
+          ? DateTime.parse(data['created_at'] as String)
           : DateTime.now(),
     );
   }
@@ -44,22 +44,22 @@ class NotificationRepository {
     return _client
         .from('notifications')
         .stream(primaryKey: ['id'])
-        .eq('userId', uid)
-        .order('createdAt', ascending: false)
+        .eq('user_id', uid)
+        .order('created_at', ascending: false)
         .limit(50)
         .map((data) => data.map((json) => AppNotification.fromMap(json, json['id'] as String)).toList());
   }
 
   Future<void> markAsRead(String notificationId) async {
-    await _client.from('notifications').update({'isRead': true}).eq('id', notificationId);
+    await _client.from('notifications').update({'is_read': true}).eq('id', notificationId);
   }
 
   Future<void> markAllAsRead(String uid) async {
     await _client
         .from('notifications')
-        .update({'isRead': true})
-        .eq('userId', uid)
-        .eq('isRead', false);
+        .update({'is_read': true})
+        .eq('user_id', uid)
+        .eq('is_read', false);
   }
 
   /// Create a local notification (for server-side, use Cloud Functions)
@@ -70,12 +70,12 @@ class NotificationRepository {
     String? route,
   }) async {
     await _client.from('notifications').insert({
-      'userId': userId,
+      'user_id': userId,
       'title': title,
       'body': body,
       'route': route,
-      'isRead': false,
-      'createdAt': DateTime.now().toIso8601String(),
+      'is_read': false,
+      'created_at': DateTime.now().toIso8601String(),
     });
   }
 }

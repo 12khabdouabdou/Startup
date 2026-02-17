@@ -23,6 +23,7 @@ import '../../features/verification/screens/verify_docs_screen.dart';
 import '../../features/admin/screens/admin_dashboard_screen.dart'; // Admin Dashboard
 import '../../features/admin/screens/user_approval_screen.dart'; // User Approval
 import '../../features/listings/screens/create_listing_screen.dart'; // Create Listing
+import '../../features/listings/screens/my_listings_screen.dart'; // My Listings
 import '../../features/notifications/screens/notification_settings_screen.dart';
 import '../../features/notifications/screens/notification_center_screen.dart';
 import '../../features/compliance/screens/manifest_screen.dart';
@@ -159,6 +160,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/listings/create',
         builder: (context, state) => const CreateListingScreen(),
+      ),
+      GoRoute(
+        path: '/listings/my',
+        builder: (context, state) => const MyListingsScreen(),
+      ),
+      GoRoute(
+        path: '/listings/:id',
+        builder: (context, state) => ListingDetailScreen(listingId: state.pathParameters['id'] ?? ''),
       ),
       GoRoute(
         path: '/jobs/board',

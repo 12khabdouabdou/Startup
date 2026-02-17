@@ -18,55 +18,60 @@ class ChatMessage {
   factory ChatMessage.fromMap(Map<String, dynamic> data, String id) {
     return ChatMessage(
       id: id,
-      chatId: data['chatId'] as String? ?? '',
-      senderUid: data['senderUid'] as String? ?? '',
-      text: data['text'] as String? ?? '',
-      sentAt: (data['sentAt'] is String)
-          ? DateTime.parse(data['sentAt'] as String)
+      chatId: data['chat_id'] as String? ?? '',
+      senderUid: data['sender_uid'] as String? ?? '',
+      text: data['content'] as String? ?? '', // 'content' in schema
+      sentAt: (data['created_at'] is String)
+          ? DateTime.parse(data['created_at'] as String)
           : DateTime.now(),
     );
   }
 
   Map<String, dynamic> toMap() => {
-    'chatId': chatId,
-    'senderUid': senderUid,
-    'text': text,
-    'sentAt': sentAt.toIso8601String(),
+    'chat_id': chatId,
+    'sender_uid': senderUid,
+    'content': text,
+    'created_at': sentAt.toIso8601String(),
+    'is_read': false,
   };
 }
 
 /// A chat thread between two users, optionally linked to a listing
 class Chat {
   final String id;
-  final List<String> participantUids;
+  final List<String> participantIds;
   final String? listingId;
   final String? lastMessage;
   final DateTime? lastMessageAt;
 
   const Chat({
     required this.id,
-    required this.participantUids,
+    required this.participantIds,
     this.listingId,
     this.lastMessage,
     this.lastMessageAt,
   });
 
   factory Chat.fromMap(Map<String, dynamic> data, String id) {
+    // Handle participant_ids (might be list or string array form Supabase)
+    // Supabase returns array as List<dynamic>
+    final parts = (data['participant_ids'] as List?)?.map((e) => e.toString()).toList() ?? [];
+
     return Chat(
       id: id,
-      participantUids: List<String>.from(data['participantUids'] ?? []),
-      listingId: data['listingId'] as String?,
-      lastMessage: data['lastMessage'] as String?,
-      lastMessageAt: (data['lastMessageAt'] is String)
-          ? DateTime.parse(data['lastMessageAt'] as String)
+      participantIds: parts,
+      listingId: data['listing_id'] as String?,
+      lastMessage: data['last_message'] as String?,
+      lastMessageAt: (data['last_message_at'] is String)
+          ? DateTime.parse(data['last_message_at'] as String)
           : null,
     );
   }
 
   Map<String, dynamic> toMap() => {
-    'participantUids': participantUids,
-    'listingId': listingId,
-    'lastMessage': lastMessage,
-    'lastMessageAt': lastMessageAt,
+    'participant_ids': participantIds,
+    'listing_id': listingId,
+    'last_message': lastMessage,
+    'last_message_at': lastMessageAt?.toIso8601String(),
   };
 }

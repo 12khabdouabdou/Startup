@@ -9,12 +9,14 @@ class JobRepository {
   JobRepository(this._client);
 
   // ─── Create ──────────────────────────────────────
+  // ─── Create ──────────────────────────────────────
   Future<String> createJob(Job job) async {
-    final response = await _client.from('jobs').insert({
-      ...job.toMap(),
-      'createdAt': DateTime.now().toIso8601String(),
-      'updatedAt': DateTime.now().toIso8601String(),
-    }).select().single();
+    final data = job.toMap();
+    // Start status as accepted if created by hauler accepting a listing?
+    // Or pending if created by host?
+    // We'll rely on the job object passed in.
+    
+    final response = await _client.from('jobs').insert(data).select().single();
     return response['id'] as String;
   }
 
@@ -24,7 +26,7 @@ class JobRepository {
         .from('jobs')
         .stream(primaryKey: ['id'])
         .eq('status', 'pending')
-        .order('createdAt', ascending: false)
+        .order('created_at', ascending: false)
         .map((data) => data.map((json) => Job.fromMap(json, json['id'] as String)).toList());
   }
 
@@ -32,8 +34,8 @@ class JobRepository {
     return _client
         .from('jobs')
         .stream(primaryKey: ['id'])
-        .eq('haulerUid', haulerUid)
-        .order('createdAt', ascending: false)
+        .eq('hauler_uid', haulerUid)
+        .order('created_at', ascending: false)
         .map((data) => data.map((json) => Job.fromMap(json, json['id'] as String)).toList());
   }
 
@@ -41,8 +43,8 @@ class JobRepository {
     return _client
         .from('jobs')
         .stream(primaryKey: ['id'])
-        .eq('hostUid', hostUid)
-        .order('createdAt', ascending: false)
+        .eq('host_uid', hostUid)
+        .order('created_at', ascending: false)
         .map((data) => data.map((json) => Job.fromMap(json, json['id'] as String)).toList());
   }
 
@@ -60,17 +62,17 @@ class JobRepository {
   // ─── Status Transitions ──────────────────────────
   Future<void> acceptJob(String jobId, String haulerUid, String haulerName) async {
     await _client.from('jobs').update({
-      'haulerUid': haulerUid,
-      'haulerName': haulerName,
+      'hauler_uid': haulerUid,
+      'hauler_name': haulerName,
       'status': JobStatus.accepted.name,
-      'updatedAt': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
     }).eq('id', jobId);
   }
 
   Future<void> updateJobStatus(String jobId, JobStatus status) async {
     await _client.from('jobs').update({
       'status': status.name,
-      'updatedAt': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
     }).eq('id', jobId);
   }
 
@@ -81,17 +83,17 @@ class JobRepository {
   // ─── Photo Verification ──────────────────────────
   Future<void> uploadPickupPhoto(String jobId, String photoUrl) async {
     await _client.from('jobs').update({
-      'pickupPhotoUrl': photoUrl,
+      'pickup_photo_url': photoUrl,
       'status': JobStatus.loaded.name,
-      'updatedAt': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
     }).eq('id', jobId);
   }
 
   Future<void> uploadDropoffPhoto(String jobId, String photoUrl) async {
     await _client.from('jobs').update({
-      'dropoffPhotoUrl': photoUrl,
+      'dropoff_photo_url': photoUrl,
       'status': JobStatus.completed.name,
-      'updatedAt': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
     }).eq('id', jobId);
   }
 }

@@ -11,13 +11,7 @@ import '../../auth/repositories/auth_repository.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../../../core/models/app_user.dart';
 
-/// Provider: streams the current user's own listings
-final myListingsProvider = StreamProvider.autoDispose<List<Listing>>((ref) {
-  final user = ref.watch(authRepositoryProvider).currentUser;
-  if (user == null) return Stream.value([]);
-
-  return ref.watch(listingRepositoryProvider).fetchUserListings(user.id);
-});
+// myListingsProvider is imported from listing_repository.dart
 
 /// Provider: streams the hauler's assigned jobs
 final myJobsProvider = StreamProvider.autoDispose<List<Job>>((ref) {
@@ -26,90 +20,44 @@ final myJobsProvider = StreamProvider.autoDispose<List<Job>>((ref) {
   return ref.watch(jobRepositoryProvider).fetchHaulerJobs(user.id);
 });
 
-class ActivityScreen extends ConsumerWidget {
-  const ActivityScreen({super.key});
+/// Provider: streams the host's jobs
+final myHostJobsProvider = StreamProvider.autoDispose<List<Job>>((ref) {
+  final user = ref.watch(authRepositoryProvider).currentUser;
+  if (user == null) return Stream.value([]);
+  return ref.watch(jobRepositoryProvider).fetchHostJobs(user.id);
+});
 
+class _HostActivityView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userDoc = ref.watch(userDocProvider).valueOrNull;
-
-    if (userDoc == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    // Haulers see their jobs, others see their listings
-    if (userDoc.role == UserRole.hauler) {
-      return _HaulerActivityView();
-    }
-    return _HostActivityView();
-  }
-}
-
-// ─── Hauler View: My Jobs ────────────────────────────
-
-class _HaulerActivityView extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final jobsAsync = ref.watch(myJobsProvider);
-
-    return Column(
-      children: [
-        // Quick action bar
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => context.push('/jobs/board'),
-              icon: const Icon(Icons.search),
-              label: const Text('Browse Available Jobs'),
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          const TabBar(
+            tabs: [
+              Tab(text: 'My Listings'),
+              Tab(text: 'Active Jobs'),
+            ],
+            labelColor: Colors.blue,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: Colors.blue,
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _HostListingsTab(),
+                _HostJobsTab(),
+              ],
             ),
           ),
-        ),
-
-        Expanded(
-          child: jobsAsync.when(
-            data: (jobs) {
-              if (jobs.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.local_shipping_outlined, size: 64, color: Colors.grey[400]),
-                      const SizedBox(height: 16),
-                      Text('No active jobs.', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: () => context.push('/jobs/board'),
-                        icon: const Icon(Icons.search),
-                        label: const Text('Find Jobs'),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.only(bottom: 80),
-                itemCount: jobs.length,
-                itemBuilder: (context, index) {
-                  final job = jobs[index];
-                  return _JobTile(job: job, onTap: () => context.push('/jobs/${job.id}', extra: job));
-                },
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, _) => Center(child: Text('Error: $err')),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-// ─── Host View: My Listings ──────────────────────────
-
-class _HostActivityView extends ConsumerWidget {
+class _HostListingsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final listingsAsync = ref.watch(myListingsProvider);
@@ -123,20 +71,16 @@ class _HostActivityView extends ConsumerWidget {
               children: [
                 Icon(Icons.post_add, size: 64, color: Colors.grey[400]),
                 const SizedBox(height: 16),
-                Text('You haven\'t posted any listings yet.', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
+                const Text('No listings yet.', style: TextStyle(color: Colors.grey)),
+                ElevatedButton(
                   onPressed: () => context.push('/listings/create'),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Create Listing'),
+                  child: const Text('Create Listing'),
                 ),
               ],
             ),
           );
         }
-
         return ListView.builder(
-          padding: const EdgeInsets.only(top: 8, bottom: 80),
           itemCount: listings.length,
           itemBuilder: (context, index) {
             final listing = listings[index];
@@ -150,30 +94,51 @@ class _HostActivityView extends ConsumerWidget {
                 child: const Icon(Icons.archive, color: Colors.white),
               ),
               confirmDismiss: (_) async {
-                return await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Archive Listing?'),
-                    content: const Text('This listing will be hidden from the feed.'),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                      TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Archive', style: TextStyle(color: Colors.red))),
-                    ],
-                  ),
-                );
+                 return await showDialog<bool>(
+                   context: context,
+                   builder: (c) => AlertDialog(
+                     title: const Text('Archive?'),
+                     actions: [
+                       TextButton(onPressed: () => c.pop(false), child: const Text('Cancel')),
+                       TextButton(onPressed: () => c.pop(true), child: const Text('Archive', style: TextStyle(color: Colors.red))),
+                     ],
+                   ),
+                 );
               },
               onDismissed: (_) {
-                // Use Repository to archive
                 ref.read(listingRepositoryProvider).archiveListing(listing.id);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing archived')));
               },
-              child: ListingCard(listing: listing, onTap: () {}),
+              child: ListingCard(listing: listing, onTap: () => context.push('/listings/${listing.id}', extra: listing)),
             );
           },
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, _) => Center(child: Text('Error: $err')),
+      error: (e, _) => Center(child: Text('Error: $e')),
+    );
+  }
+}
+
+class _HostJobsTab extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final jobsAsync = ref.watch(myHostJobsProvider);
+
+    return jobsAsync.when(
+      data: (jobs) {
+        if (jobs.isEmpty) {
+           return const Center(child: Text('No active jobs.'));
+        }
+        return ListView.builder(
+          itemCount: jobs.length,
+          itemBuilder: (context, index) {
+            final job = jobs[index];
+            return _JobTile(job: job, onTap: () => context.push('/jobs/${job.id}'));
+          },
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Error: $e')),
     );
   }
 }

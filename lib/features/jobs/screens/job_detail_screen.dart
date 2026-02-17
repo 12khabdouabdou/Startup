@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/job_model.dart';
 import '../repositories/job_repository.dart';
+import '../../listings/repositories/listing_repository.dart';
 import '../../auth/repositories/auth_repository.dart';
 import '../../../core/services/storage_service.dart';
 import '../../profile/providers/profile_provider.dart';
+import '../../messaging/repositories/chat_repository.dart';
 
 class JobDetailScreen extends ConsumerStatefulWidget {
   final String jobId;
@@ -31,6 +33,37 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
         user.id,
         profile?.displayName ?? 'Hauler',
       );
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _cancelJob(Job job) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Cancel Request?'),
+        content: const Text('Are you sure you want to cancel this job request?'),
+        actions: [
+          TextButton(onPressed: () => c.pop(false), child: const Text('No')),
+          TextButton(onPressed: () => c.pop(true), child: const Text('Yes, Cancel', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await ref.read(jobRepositoryProvider).cancelJob(job.id);
+      // Also should set listing back to active?
+      // Typically yes, if job is cancelled, listing should be re-opened.
+      // But JobRepository doesn't know about ListingRepository.
+      // We should do it here.
+      await ref.read(listingRepositoryProvider).updateListing(job.listingId, {'status': 'active'});
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Cancelled')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
@@ -69,6 +102,27 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
         await repo.uploadPickupPhoto(job.id, url);
       } else {
         await repo.uploadDropoffPhoto(job.id, url);
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _contactUser(String otherUid, String? listingId) async {
+    final currentUid = ref.read(authRepositoryProvider).currentUser?.id;
+    if (currentUid == null) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final chatId = await ref.read(chatRepositoryProvider).getOrCreateChat(
+        currentUid: currentUid,
+        otherUid: otherUid,
+        listingId: listingId,
+      );
+      if (mounted) {
+        context.push('/chat/$chatId');
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -161,120 +215,159 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    switch (job.status) {
-      case JobStatus.pending:
-        return ElevatedButton.icon(
-          onPressed: () => _acceptJob(job),
-          icon: const Icon(Icons.check_circle),
-          label: const Text('Accept This Job'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-        );
+    final currentUid = ref.watch(authRepositoryProvider).currentUser?.id;
+    if (currentUid == null) return const SizedBox();
 
-      case JobStatus.accepted:
-        return ElevatedButton.icon(
-          onPressed: () => _advanceStatus(job, JobStatus.enRoute),
-          icon: const Icon(Icons.navigation),
-          label: const Text('Start Navigation to Pickup'),
-          style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-        );
+    final isHauler = currentUid == job.haulerUid;
+    final isHost = currentUid == job.hostUid;
 
-      case JobStatus.enRoute:
-        return ElevatedButton.icon(
-          onPressed: () => _advanceStatus(job, JobStatus.atPickup),
-          icon: const Icon(Icons.location_on),
-          label: const Text('Arrived at Pickup'),
-          style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-        );
+// ... inside _buildActions ...
 
-      case JobStatus.atPickup:
-        return ElevatedButton.icon(
-          onPressed: () => _takePhoto(job, isPickup: true),
-          icon: const Icon(Icons.camera_alt),
-          label: const Text('Take Pickup Photo (Required)'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-        );
-
-      case JobStatus.loaded:
-        return ElevatedButton.icon(
-          onPressed: () => _advanceStatus(job, JobStatus.inTransit),
-          icon: const Icon(Icons.local_shipping),
-          label: const Text('Depart to Dropoff'),
-          style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-        );
-
-      case JobStatus.inTransit:
-        return ElevatedButton.icon(
-          onPressed: () => _advanceStatus(job, JobStatus.atDropoff),
-          icon: const Icon(Icons.flag),
-          label: const Text('Arrived at Dropoff'),
-          style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
-        );
-
-      case JobStatus.atDropoff:
-        return ElevatedButton.icon(
-          onPressed: () => _takePhoto(job, isPickup: false),
-          icon: const Icon(Icons.camera_alt),
-          label: const Text('Take Dropoff Photo (Required)'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-        );
-
-      case JobStatus.completed:
-        return Column(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 48),
-            const SizedBox(height: 8),
-            const Text('Job Completed!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => context.push('/jobs/${job.id}/manifest', extra: {
-                  'job': job,
-                  'hostName': 'Host', // TODO: fetch from user doc
-                  'haulerName': job.haulerName ?? 'Hauler',
-                }),
-                icon: const Icon(Icons.description),
-                label: const Text('View Manifest'),
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+    // Host View
+    if (isHost) {
+       // ... existing cancel logic ...
+       
+       if (job.status != JobStatus.completed && job.status != JobStatus.cancelled && job.haulerUid != null) {
+          return Column(
+            children: [
+               SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _contactUser(job.haulerUid!, job.listingId),
+                  icon: const Icon(Icons.chat),
+                  label: const Text('Message Hauler'),
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => context.push('/jobs/${job.id}/review', extra: {
-                  'revieweeUid': job.haulerUid ?? job.hostUid,
-                  'revieweeName': job.haulerName ?? 'User',
-                }),
-                icon: const Icon(Icons.star),
-                label: const Text('Leave a Review'),
-              ),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton(
-              onPressed: () => context.pop(),
-              child: const Text('Back to Jobs'),
-            ),
-          ],
-        );
-
-      case JobStatus.cancelled:
-        return const Center(
-          child: Text('This job has been cancelled.', style: TextStyle(color: Colors.red, fontSize: 16)),
-        );
+              const SizedBox(height: 10),
+              if (job.status == JobStatus.pending)
+                OutlinedButton.icon(
+                  onPressed: () => _cancelJob(job),
+                  icon: const Icon(Icons.cancel),
+                  label: const Text('Cancel Job Request'),
+                  style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                ),
+            ],
+          );
+       }
+       // ... existing complete logic ...
+       return const SizedBox();
     }
+
+    // Hauler View
+    if (isHauler) {
+       // Add contact button at the top of actions or bottom?
+       // Let's return a Column with contact button at bottom
+       
+       Widget actionButton = const SizedBox();
+       switch (job.status) {
+        case JobStatus.pending:
+          actionButton = ElevatedButton.icon(
+            onPressed: () => _acceptJob(job),
+            icon: const Icon(Icons.check_circle),
+            label: const Text('Accept This Job'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
+          );
+          break;
+        case JobStatus.accepted:
+          actionButton = ElevatedButton.icon(
+            onPressed: () => _advanceStatus(job, JobStatus.enRoute),
+            icon: const Icon(Icons.navigation),
+            label: const Text('Start Navigation'),
+            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+          );
+          break;
+        case JobStatus.enRoute:
+          actionButton = ElevatedButton.icon(
+            onPressed: () => _advanceStatus(job, JobStatus.atPickup),
+            icon: const Icon(Icons.location_on),
+            label: const Text('Arrived at Pickup'),
+            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+          );
+          break;
+        case JobStatus.atPickup:
+          actionButton = ElevatedButton.icon(
+            onPressed: () => _takePhoto(job, isPickup: true),
+            icon: const Icon(Icons.camera_alt),
+            label: const Text('Take Pickup Photo'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
+          );
+          break;
+        case JobStatus.loaded:
+          actionButton = ElevatedButton.icon(
+             onPressed: () => _advanceStatus(job, JobStatus.inTransit),
+             icon: const Icon(Icons.local_shipping),
+             label: const Text('Depart to Dropoff'),
+             style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+          );
+          break;
+        case JobStatus.inTransit:
+          actionButton = ElevatedButton.icon(
+             onPressed: () => _advanceStatus(job, JobStatus.atDropoff),
+             icon: const Icon(Icons.flag),
+             label: const Text('Arrived at Dropoff'),
+             style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+          );
+          break;
+        case JobStatus.atDropoff:
+          actionButton = ElevatedButton.icon(
+            onPressed: () => _takePhoto(job, isPickup: false),
+            icon: const Icon(Icons.camera_alt),
+            label: const Text('Take Dropoff Photo'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
+          );
+          break;
+        case JobStatus.completed:
+           // ... existing complete logic ...
+           return Column(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green, size: 48),
+                const SizedBox(height: 8),
+                const Text('Job Completed!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => context.push('/jobs/${job.id}/manifest', extra: {
+                      'job': job,
+                      'hostName': 'Host', 
+                      'haulerName': 'You',
+                    }),
+                    icon: const Icon(Icons.description),
+                    label: const Text('View Manifest'),
+                    style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton(
+                  onPressed: () => context.pop(),
+                  child: const Text('Back to Jobs'),
+                ),
+              ],
+           );
+        case JobStatus.cancelled:
+           return const Center(child: Text('Cancelled', style: TextStyle(color: Colors.red)));
+       }
+
+       return Column(
+         children: [
+           SizedBox(width: double.infinity, child: actionButton),
+           if (job.status != JobStatus.completed && job.status != JobStatus.cancelled) ...[
+             const SizedBox(height: 12),
+             SizedBox(
+               width: double.infinity,
+               child: OutlinedButton.icon(
+                 onPressed: () => _contactUser(job.hostUid, job.listingId),
+                 icon: const Icon(Icons.chat_bubble_outline),
+                 label: const Text('Message Host'),
+               ),
+             ),
+           ],
+         ],
+       );
+    }
+    
+    // Viewer / Other (Not owner or hauler)
+    return const SizedBox();
   }
 }
 

@@ -4,6 +4,11 @@ import 'package:go_router/go_router.dart';
 import '../models/listing_model.dart';
 import '../repositories/listing_repository.dart';
 import '../../auth/repositories/auth_repository.dart';
+// Job & User imports
+import '../../jobs/repositories/job_repository.dart';
+import '../../jobs/models/job_model.dart';
+import '../../profile/providers/profile_provider.dart'; // for userDocProvider
+import '../../../core/models/app_user.dart';
 import '../../messaging/repositories/chat_repository.dart';
 
 class ListingDetailScreen extends ConsumerWidget {
@@ -145,18 +150,31 @@ class ListingDetailScreen extends ConsumerWidget {
                     const SizedBox(height: 24),
                   ],
 
-                  // Contact / Action Button
+                  // Contact / Action / Job Request Button
                   SizedBox(
                     width: double.infinity,
                     child: Consumer(
                       builder: (context, ref, child) {
                         final currentUid = ref.read(authRepositoryProvider).currentUser?.id;
+                        final userDocAsync = ref.watch(userDocProvider);
                         if (currentUid == null) return const SizedBox();
-                        final isOwner = currentUid == listing.hostUid;
 
-                        return ElevatedButton.icon(
-                          onPressed: () async {
-                            if (isOwner) {
+                        final isOwner = currentUid == listing.hostUid;
+                        final isHauler = userDocAsync.valueOrNull?.role == UserRole.hauler;
+                        
+                        // Action Logic
+                        VoidCallback? onPressed;
+                        IconData icon = Icons.chat;
+                        String label = 'Contact Poster';
+                        Color? bgColor;
+                        Color? fgColor;
+
+                        if (isOwner) {
+                           icon = Icons.delete;
+                           label = 'Delete Listing';
+                           bgColor = Colors.red;
+                           fgColor = Colors.white;
+                           onPressed = () async {
                               final confirm = await showDialog<bool>(
                                 context: context,
                                 builder: (c) => AlertDialog(
@@ -176,20 +194,83 @@ class ListingDetailScreen extends ConsumerWidget {
                                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing deleted')));
                                 }
                               }
-                            } else {
+                           };
+                        } else if (isHauler) {
+                           // Hauler Logic
+                           icon = Icons.local_shipping;
+                           label = 'Accept Haul (Create Job)';
+                           bgColor = Colors.blue[700];
+                           fgColor = Colors.white;
+                           onPressed = () async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (c) => AlertDialog(
+                                  title: const Text('Accept Job?'),
+                                  content: const Text('Do you want to accept this haul request? This will create a Job and notify the poster.'),
+                                  actions: [
+                                    TextButton(onPressed: () => c.pop(false), child: const Text('Cancel')),
+                                    TextButton(onPressed: () => c.pop(true), child: const Text('Accept', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  ],
+                                ),
+                              );
+                              
+                              if (confirm == true) {
+                                 try {
+                                   final haulerUid = currentUid;
+                                   // Create Job
+                                   final job = Job(
+                                      id: '', // database gen
+                                      listingId: listing.id,
+                                      hostUid: listing.hostUid,
+                                      haulerUid: haulerUid,
+                                      // haulerName requires fetching or relying on profile. 
+                                      // Ideally backend triggers fill this but we can pass it if we have it?
+                                      // using userDoc display name
+                                      haulerName: userDocAsync.valueOrNull?.displayName ?? 'Hauler',
+                                      status: JobStatus.accepted,
+                                      quantity: listing.quantity,
+                                      material: listing.material.name,
+                                      pickupAddress: listing.address,
+                                      pickupLocation: listing.location,
+                                      createdAt: DateTime.now(),
+                                   );
+                                   
+                                   final jobId = await ref.read(jobRepositoryProvider).createJob(job);
+                                   
+                                   // Mark Listing Booked
+                                   await ref.read(listingRepositoryProvider).updateListing(listing.id, {'status': 'booked'});
+                                   
+                                   if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Created Successfully!')));
+                                      // Navigate to Job?
+                                      // context.go('/jobs/$jobId'); 
+                                      // or just back
+                                      context.pop(); 
+                                   }
+                                 } catch (e) {
+                                   if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                 }
+                              }
+                           };
+                        } else {
+                           // Default / Chat
+                           onPressed = () async {
                               final chatId = await ref.read(chatRepositoryProvider).getOrCreateChat(
                                 currentUid: currentUid,
                                 otherUid: listing.hostUid,
                                 listingId: listing.id,
                               );
                               if (context.mounted) context.push('/chat/$chatId');
-                            }
-                          },
-                          icon: Icon(isOwner ? Icons.delete : Icons.chat),
-                          label: Text(isOwner ? 'Delete Listing' : 'Contact Poster'),
+                           };
+                        }
+
+                        return ElevatedButton.icon(
+                          onPressed: onPressed,
+                          icon: Icon(icon),
+                          label: Text(label),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isOwner ? Colors.red : null,
-                            foregroundColor: isOwner ? Colors.white : null,
+                            backgroundColor: bgColor,
+                            foregroundColor: fgColor,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                         );

@@ -44,17 +44,26 @@ class Listing {
     // Start with basic map check
     GeoPoint? loc;
     if (data['location'] != null) {
+      // Check if it's GeoJSON map
       if (data['location'] is Map) {
          final l = data['location'];
-         // PostGIS / GeoJSON returns coordinates usually
-         // or if we simply stored a map
-         if (l['latitude'] != null && l['longitude'] != null) {
+         if (l['type'] == 'Point' && l['coordinates'] is List) {
+             final coords = l['coordinates'] as List;
+             if (coords.length >= 2) {
+                 // GeoJSON is [lng, lat]
+                 loc = GeoPoint(coords[1].toDouble(), coords[0].toDouble());
+             }
+         }
+         // Fallback for flat map
+         else if (l['latitude'] != null && l['longitude'] != null) {
              loc = GeoPoint(l['latitude'], l['longitude']);
          }
-      }
+      } 
+      // Handle string WKT if returned as string? Usually returns GeoJSON.
     }
 
     return Listing(
+// ... (rest of constructor same as before until createdAt)
       id: id,
       hostUid: (data['owner_id'] ?? data['hostUid']) as String, // Support both for safety, prefer owner_id
       type: ListingType.values.firstWhere(
@@ -99,8 +108,13 @@ class Listing {
       'currency': currency,
       'description': description,
       'photos': photos,
-      // Store location as JSONB for now or flattened
-      'location': location != null ? {'latitude': location!.latitude, 'longitude': location!.longitude} : null,
+      // Store location as GeoJSON Point for PostGIS compatibility
+      'location': location != null 
+          ? {
+              'type': 'Point',
+              'coordinates': [location!.longitude, location!.latitude] // [lng, lat]
+            } 
+          : null,
       'address': address,
       'status': status.name,
       'created_at': createdAt.toIso8601String(), // Mapped to created_at
