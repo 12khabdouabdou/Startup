@@ -41,14 +41,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     setState(() => _isLoading = true);
     try {
       final updates = <String, dynamic>{
-        'displayName': _nameController.text.trim(),
-        'companyName': _companyController.text.trim(),
-        'phoneNumber': _phoneController.text.trim(),
+        'display_name': _nameController.text.trim(),
+        'company_name': _companyController.text.trim(),
+        'phone_number': _phoneController.text.trim(),
       };
 
       final fleetText = _fleetSizeController.text.trim();
       if (fleetText.isNotEmpty) {
-        updates['fleetSize'] = int.tryParse(fleetText);
+        updates['fleet_size'] = int.tryParse(fleetText);
       }
 
       await ref.read(profileRepositoryProvider).updateUser(uid, updates);

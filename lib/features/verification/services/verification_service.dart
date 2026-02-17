@@ -27,7 +27,7 @@ class VerificationService {
 
     // 2. Update Firestore Profile
     await _profileService.updateUser(uid, {
-      'licenseUrl': downloadUrl,
+      'license_url': downloadUrl,
       // Status remains pending until Admin review
     });
   }
