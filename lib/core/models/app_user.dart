@@ -37,9 +37,9 @@ class AppUser {
   factory AppUser.fromMap(Map<String, dynamic> data, String uid) {
     return AppUser(
       uid: uid,
-      phoneNumber: data['phoneNumber'] as String?,
-      displayName: data['displayName'] as String?,
-      companyName: data['companyName'] as String?,
+      phoneNumber: data['phone_number'] as String?,
+      displayName: data['display_name'] as String?,
+      companyName: data['company_name'] as String?,
       role: UserRole.values.firstWhere(
         (e) => e.name == (data['role'] as String? ?? 'excavator'),
         orElse: () => UserRole.excavator,
@@ -48,32 +48,32 @@ class AppUser {
         (e) => e.name == (data['status'] as String? ?? 'pending'),
         orElse: () => UserStatus.pending,
       ),
-      createdAt: (data['createdAt'] is String)
-          ? DateTime.parse(data['createdAt'] as String)
-          : (data['createdAt'] is int)
-              ? DateTime.fromMillisecondsSinceEpoch(data['createdAt'] as int)
+      createdAt: (data['created_at'] is String)
+          ? DateTime.parse(data['created_at'] as String)
+          : (data['created_at'] is int)
+              ? DateTime.fromMillisecondsSinceEpoch(data['created_at'] as int)
               : DateTime.now(),
-      fcmToken: data['fcmToken'] as String?,
-      licenseUrl: data['licenseUrl'] as String?,
-      fleetSize: data['fleetSize'] as int?,
+      fcmToken: data['fcm_token'] as String?,
+      licenseUrl: data['license_url'] as String?,
+      fleetSize: data['fleet_size'] as int?,
       rating: (data['rating'] as num?)?.toDouble() ?? 0.0,
-      reviewCount: (data['reviewCount'] as num?)?.toInt() ?? 0,
+      reviewCount: (data['review_count'] as num?)?.toInt() ?? 0,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'phoneNumber': phoneNumber,
-      'displayName': displayName,
-      'companyName': companyName,
+      'phone_number': phoneNumber,
+      'display_name': displayName,
+      'company_name': companyName,
       'role': role.name,
       'status': status.name,
-      'createdAt': createdAt.millisecondsSinceEpoch,
-      'fcmToken': fcmToken,
-      'licenseUrl': licenseUrl,
-      'fleetSize': fleetSize,
+      'created_at': createdAt.toIso8601String(),
+      'fcm_token': fcmToken,
+      'license_url': licenseUrl,
+      'fleet_size': fleetSize,
       'rating': rating,
-      'reviewCount': reviewCount,
+      'review_count': reviewCount,
     };
   }
 }

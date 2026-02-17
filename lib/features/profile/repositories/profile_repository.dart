@@ -23,16 +23,16 @@ class ProfileRepository {
   Future<void> createUser(AppUser user) async {
     // Upsert to handle potential race conditions or re-auths
     await _client.from('users').upsert({
-      'uid': user.id, // Supabase usually needs explicit ID if not auto-generated
-      'phoneNumber': user.phone,
-      'displayName': user.displayName,
-      'companyName': user.companyName,
+      'uid': user.id, 
+      'phone_number': user.phone,
+      'display_name': user.displayName,
+      'company_name': user.companyName,
       'role': user.role.name,
       'status': user.status.name,
-      'createdAt': DateTime.now().toIso8601String(), // Supabase timestamptz
-      'fcmToken': user.fcmToken,
-      'licenseUrl': user.licenseUrl,
-      'fleetSize': user.fleetSize,
+      'created_at': DateTime.now().toIso8601String(),
+      'fcm_token': user.fcmToken,
+      'license_url': user.licenseUrl,
+      'fleet_size': user.fleetSize,
     });
   }
 
