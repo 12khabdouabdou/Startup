@@ -147,26 +147,52 @@ class ListingDetailScreen extends ConsumerWidget {
                   // Contact / Action Button
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
+                    child: Consumer(
+                      builder: (context, ref, child) {
                         final currentUid = ref.read(authRepositoryProvider).currentUser?.id;
-                        if (currentUid == null) return;
-                        if (currentUid == listing.hostUid) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('This is your own listing')),
-                          );
-                          return;
-                        }
-                        final chatId = await ref.read(chatRepositoryProvider).getOrCreateChat(
-                          currentUid: currentUid,
-                          otherUid: listing.hostUid,
-                          listingId: listing.id,
+                        if (currentUid == null) return const SizedBox();
+                        final isOwner = currentUid == listing.hostUid;
+
+                        return ElevatedButton.icon(
+                          onPressed: () async {
+                            if (isOwner) {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (c) => AlertDialog(
+                                  title: const Text('Delete Listing?'),
+                                  content: const Text('Are you sure you want to remove this listing?'),
+                                  actions: [
+                                    TextButton(onPressed: () => c.pop(false), child: const Text('Cancel')),
+                                    TextButton(onPressed: () => c.pop(true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+                                  ],
+                                ),
+                              );
+
+                              if (confirm == true) {
+                                await ref.read(listingRepositoryProvider).archiveListing(listing.id);
+                                if (context.mounted) {
+                                  context.pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing deleted')));
+                                }
+                              }
+                            } else {
+                              final chatId = await ref.read(chatRepositoryProvider).getOrCreateChat(
+                                currentUid: currentUid,
+                                otherUid: listing.hostUid,
+                                listingId: listing.id,
+                              );
+                              if (context.mounted) context.push('/chat/$chatId');
+                            }
+                          },
+                          icon: Icon(isOwner ? Icons.delete : Icons.chat),
+                          label: Text(isOwner ? 'Delete Listing' : 'Contact Poster'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isOwner ? Colors.red : null,
+                            foregroundColor: isOwner ? Colors.white : null,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
                         );
-                        if (context.mounted) context.push('/chat/$chatId');
                       },
-                      icon: const Icon(Icons.chat),
-                      label: const Text('Contact Poster'),
-                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
                     ),
                   ),
                 ],

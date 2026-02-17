@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fill_exchange/core/services/storage_service.dart';
 import 'package:fill_exchange/features/auth/repositories/auth_repository.dart';
+import 'package:geolocator/geolocator.dart';
+import '../../../core/models/geo_point.dart';
 import '../models/listing_model.dart';
 import '../repositories/listing_repository.dart';
 
@@ -32,6 +34,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   final _addressController = TextEditingController();
   final _descriptionController = TextEditingController();
   final List<XFile> _selectedPhotos = [];
+  GeoPoint? _currentLocation;
 
   final _formKey = GlobalKey<FormState>();
 
@@ -49,6 +52,48 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked != null) {
       setState(() => _selectedPhotos.add(picked));
+    }
+  }
+
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location services are disabled.')));
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permissions are denied')));
+        return;
+      }
+    }
+    
+    if (permission == LocationPermission.deniedForever) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permissions are permanently denied.')));
+      return;
+    } 
+
+    setState(() => _isLoading = true);
+    try {
+      final position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _currentLocation = GeoPoint(position.latitude, position.longitude);
+        // If address is empty, fill with coords as placeholder
+        if (_addressController.text.isEmpty) {
+           _addressController.text = "Lat: ${position.latitude.toStringAsFixed(4)}, Lng: ${position.longitude.toStringAsFixed(4)}";
+        }
+      });
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location Acquired!')));
+    } catch (e) {
+       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error getting location: $e')));
+    } finally {
+       if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -82,7 +127,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         description: _descriptionController.text.trim(),
         photos: photoUrls,
         address: _addressController.text.trim(),
-        // Location GeoPoint handled by geocoding later (Story 3.3). For now left null.
+        location: _currentLocation,
         createdAt: DateTime.now(),
       );
 
@@ -182,10 +227,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
-          onPressed: () {
-            // Placeholder for Geolocator logic
-            _addressController.text = "Current Location (Mocked)";
-          },
+          onPressed: _getCurrentLocation,
           icon: const Icon(Icons.my_location),
           label: const Text('Use Current Location'),
         ),
