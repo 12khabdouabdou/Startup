@@ -164,64 +164,88 @@ class ListingDetailScreen extends ConsumerWidget {
                     child: Consumer(
                       builder: (context, ref, child) {
                         final currentUid = ref.watch(authRepositoryProvider).currentUser?.id;
-                        if (currentUid == null) return const SizedBox();
+                        final userDoc = ref.watch(userDocProvider).valueOrNull;
+                        
+                        if (currentUid == null || userDoc == null) return const SizedBox();
 
                         final isOwner = currentUid == listing.hostUid;
-                        
-                        // Action Logic
-                        VoidCallback? onPressed;
-                        IconData icon = Icons.chat;
-                        String label = 'Contact Poster';
-                        Color? bgColor = Colors.blue;
-                        Color? fgColor = Colors.white;
+                        final role = userDoc.role;
 
                         if (isOwner) {
-                           icon = Icons.delete;
-                           label = 'Delete Listing';
-                           bgColor = Colors.red;
-                           fgColor = Colors.white;
-                           onPressed = () async {
-                               final confirm = await showDialog<bool>(
-                                 context: context,
-                                 builder: (c) => AlertDialog(
-                                   title: const Text('Delete Listing?'),
-                                   content: const Text('Are you sure you want to remove this listing?'),
-                                   actions: [
-                                     TextButton(onPressed: () => c.pop(false), child: const Text('Cancel')),
-                                     TextButton(onPressed: () => c.pop(true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
-                                   ],
-                                 ),
-                               );
+                           return ElevatedButton.icon(
+                             onPressed: () async {
+                                 final confirm = await showDialog<bool>(
+                                   context: context,
+                                   builder: (c) => AlertDialog(
+                                     title: const Text('Delete Listing?'),
+                                     content: const Text('Are you sure you want to remove this listing?'),
+                                     actions: [
+                                       TextButton(onPressed: () => c.pop(false), child: const Text('Cancel')),
+                                       TextButton(onPressed: () => c.pop(true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+                                     ],
+                                   ),
+                                 );
 
-                               if (confirm == true) {
-                                 await ref.read(listingRepositoryProvider).archiveListing(listing.id);
-                                 if (context.mounted) {
-                                   context.pop();
-                                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing deleted')));
+                                 if (confirm == true) {
+                                   await ref.read(listingRepositoryProvider).archiveListing(listing.id);
+                                   if (context.mounted) {
+                                     context.pop();
+                                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing deleted')));
+                                   }
                                  }
-                               }
-                           };
-                        } else {
-                           // Default / Chat (For Haulers and Developers)
-                           onPressed = () async {
-                               final chatId = await ref.read(chatRepositoryProvider).getOrCreateChat(
-                                 currentUid: currentUid,
-                                 otherUid: listing.hostUid,
-                                 listingId: listing.id,
-                               );
-                               if (context.mounted) context.push('/chat/$chatId');
-                           };
-                        }
-
-                        return ElevatedButton.icon(
-                          onPressed: onPressed,
-                          icon: Icon(icon),
-                          label: Text(label),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: bgColor,
-                            foregroundColor: fgColor,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
+                             },
+                             icon: const Icon(Icons.delete),
+                             label: const Text('Delete Listing'),
+                             style: ElevatedButton.styleFrom(
+                               backgroundColor: Colors.red,
+                               foregroundColor: Colors.white,
+                               padding: const EdgeInsets.symmetric(vertical: 14),
+                             ),
+                           );
+                        } 
+                        
+                        // Not Owner: Show "Contact" and optionally "Post Job"
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                  final chatId = await ref.read(chatRepositoryProvider).getOrCreateChat(
+                                    currentUid: currentUid,
+                                    otherUid: listing.hostUid,
+                                    listingId: listing.id,
+                                  );
+                                  if (context.mounted) context.push('/chat/$chatId');
+                              },
+                              icon: const Icon(Icons.chat),
+                              label: const Text('Contact Poster'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                            ),
+                            
+                            if (role == UserRole.developer || role == UserRole.excavator) ...[
+                               const SizedBox(height: 12),
+                               ElevatedButton.icon(
+                                  onPressed: () {
+                                     context.push('/jobs/create', extra: {
+                                        'listingId': listing.id,
+                                        'hostUid': currentUid, 
+                                        'material': listing.material.name,
+                                        'quantity': listing.quantity,
+                                        // location isn't passed in extra but CreateJob fetches it via listingId
+                                     });
+                                  },
+                                  icon: const Icon(Icons.local_shipping),
+                                  label: const Text('Post Haul Request'),
+                                  style: ElevatedButton.styleFrom(
+                                     backgroundColor: Colors.blue[800],
+                                     foregroundColor: Colors.white,
+                                     padding: const EdgeInsets.symmetric(vertical: 14),
+                                  ),
+                               ),
+                            ],
+                          ],
                         );
                       },
                     ),

@@ -332,6 +332,20 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
        return Column(
          children: [
            SizedBox(width: double.infinity, child: actionButton),
+           
+           if (job.status == JobStatus.assigned || job.status == JobStatus.enRoute) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                   onPressed: () => _cancelJob(job),
+                   icon: const Icon(Icons.cancel_outlined),
+                   label: const Text('Cancel / Unassign'),
+                   style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                ),
+              ),
+           ],
+
            if (job.status != JobStatus.completed && job.status != JobStatus.cancelled) ...[
              const SizedBox(height: 12),
              SizedBox(
