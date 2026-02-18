@@ -99,7 +99,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
              ),
         ],
       ),
-      ),
       body: Column(
         children: [
           // Messages
