@@ -15,6 +15,7 @@ import '../../features/jobs/screens/hauler_job_board_screen.dart';
 import '../../features/jobs/screens/job_detail_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/listings/screens/listing_detail_screen.dart';
+import '../../features/listings/models/listing_model.dart';
 import '../../features/jobs/models/job_model.dart';
 
 import '../../features/auth/screens/role_selection_screen.dart';
@@ -111,7 +112,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               path: '/home',
               builder: (context, state) => const HomeScreen(),
               routes: [
-                GoRoute(path: 'listings/:id', builder: (context, state) => ListingDetailScreen(listingId: state.pathParameters['id'] ?? '')),
+                GoRoute(
+                  path: 'listings/:id',
+                  builder: (context, state) {
+                    final listing = state.extra as Listing?;
+                    return ListingDetailScreen(
+                      listingId: state.pathParameters['id'] ?? '',
+                      listing: listing,
+                    );
+                  },
+                ),
               ],
             ),
           ]),
@@ -167,7 +177,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/listings/:id',
-        builder: (context, state) => ListingDetailScreen(listingId: state.pathParameters['id'] ?? ''),
+        builder: (context, state) {
+          final listing = state.extra as Listing?;
+          return ListingDetailScreen(
+            listingId: state.pathParameters['id'] ?? '',
+            listing: listing,
+          );
+        },
       ),
       GoRoute(
         path: '/jobs/board',

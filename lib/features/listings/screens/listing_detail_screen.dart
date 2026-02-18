@@ -13,7 +13,9 @@ import '../../messaging/repositories/chat_repository.dart';
 
 class ListingDetailScreen extends ConsumerWidget {
   final String listingId;
-  const ListingDetailScreen({super.key, required this.listingId});
+  final Listing? listing; // Optional passed listing
+
+  const ListingDetailScreen({super.key, required this.listingId, this.listing});
 
   String _materialLabel(FillMaterial m) {
     switch (m) {
@@ -28,9 +30,8 @@ class ListingDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // For now, listing detail is accessed via extra from the card
-    // Later this should fetch from Firestore by ID
-    final listing = ModalRoute.of(context)?.settings.arguments as Listing?;
+    // Attempt to get listing from widget or ModalRoute arguments
+    final listing = this.listing ?? ModalRoute.of(context)?.settings.arguments as Listing?;
 
     // If accessed via GoRouter extra:
     // GoRouter passes extra differently. We'll use a simple approach:
