@@ -24,7 +24,7 @@ class JobRepository {
   // ─── Read ────────────────────────────────────────
   Stream<List<Job>> fetchAvailableJobs() {
     return _client
-        .from('jobs')
+        .from('jobs_view')
         .stream(primaryKey: ['id'])
         .eq('status', JobStatus.open.name)
         .order('created_at', ascending: false)
@@ -33,7 +33,7 @@ class JobRepository {
 
   Stream<List<Job>> fetchHaulerJobs(String haulerUid) {
     return _client
-        .from('jobs')
+        .from('jobs_view')
         .stream(primaryKey: ['id'])
         .eq('hauler_uid', haulerUid)
         .order('created_at', ascending: false)
@@ -42,7 +42,7 @@ class JobRepository {
 
   Stream<List<Job>> fetchHostJobs(String hostUid) {
     return _client
-        .from('jobs')
+        .from('jobs_view')
         .stream(primaryKey: ['id'])
         .eq('host_uid', hostUid)
         .order('created_at', ascending: false)
@@ -51,7 +51,7 @@ class JobRepository {
 
   Stream<Job?> watchJob(String jobId) {
     return _client
-        .from('jobs')
+        .from('jobs_view')
         .stream(primaryKey: ['id'])
         .eq('id', jobId)
         .map((data) {
