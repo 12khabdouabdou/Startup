@@ -61,12 +61,12 @@ class JobRouteMap extends StatelessWidget {
             ),
             if (hasPickup && hasDropoff)
               PolylineLayer(
-                polylines: [
+                polylines: <Polyline<Object>>[
                   Polyline(
                     points: [pickupLatLng, dropoffLatLng],
                     strokeWidth: 4.0,
                     color: Colors.blue.withOpacity(0.7),
-                    isDotted: true,
+                    pattern: const StrokePattern.dotted(),
                   ),
                 ],
               ),

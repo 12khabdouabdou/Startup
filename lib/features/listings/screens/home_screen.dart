@@ -67,8 +67,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         actions: [
           IconButton(
             icon: Badge(
-              isLabelVisible: unreadCount > 0,
-              label: Text('$unreadCount'),
+              isLabelVisible: (unreadCount.valueOrNull ?? 0) > 0,
+              label: Text('${unreadCount.valueOrNull ?? 0}'),
               child: const Icon(Icons.notifications_outlined),
             ),
             onPressed: () => context.push('/notifications'),

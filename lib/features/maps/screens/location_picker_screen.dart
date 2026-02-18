@@ -172,7 +172,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text('Selected Location', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.BOLD)),
+                    const Text('Selected Location', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     Row(
                       children: [

@@ -103,7 +103,7 @@ class _HostActivityView extends ConsumerWidget {
               indicatorColor: Colors.blue,
           ),
         ),
-        body: const TabBarView(
+        body: TabBarView(
           children: [
             _HostListingsTab(),
             _HostJobsTab(),

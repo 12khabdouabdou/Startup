@@ -104,7 +104,6 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
         quantity: double.tryParse(_qtyController.text.trim()) ?? widget.initialQuantity ?? 0.0,
         notes: _notesController.text.trim(),
         createdAt: DateTime.now(),
-        createdAt: DateTime.now(),
         pickupLocation: _listing?.location ?? const GeoPoint(0, 0),
         dropoffLocation: _dropoffLocation ?? const GeoPoint(0, 0),
       );
