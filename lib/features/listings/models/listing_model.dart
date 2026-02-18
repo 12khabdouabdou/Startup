@@ -43,28 +43,31 @@ class Listing {
     // For now assuming it's stored as jsonb or we extract it
     // Start with basic map check
     GeoPoint? loc;
-    if (data['location'] != null) {
-      final l = data['location'];
-      // Check if it's GeoJSON map (Standard Supabase Select)
-      if (l is Map) {
-         if (l['type'] == 'Point' && l['coordinates'] is List) {
-             final coords = l['coordinates'] as List;
+    
+    // Check various sources for location data (View exposes location_geojson)
+    final rawLoc = data['location_geojson'] ?? data['location'];
+
+    if (rawLoc != null) {
+      // Check if it's GeoJSON map (Standard Supabase Select or View)
+      if (rawLoc is Map) {
+         if (rawLoc['type'] == 'Point' && rawLoc['coordinates'] is List) {
+             final coords = rawLoc['coordinates'] as List;
              if (coords.length >= 2) {
                  // GeoJSON is [lng, lat]
                  loc = GeoPoint(coords[1].toDouble(), coords[0].toDouble());
              }
          }
          // Fallback for flat map
-         else if (l['latitude'] != null && l['longitude'] != null) {
-             loc = GeoPoint(l['latitude'], l['longitude']);
+         else if (rawLoc['latitude'] != null && rawLoc['longitude'] != null) {
+             loc = GeoPoint(rawLoc['latitude'], rawLoc['longitude']);
          }
       } 
       // Handle string WKT (Well Known Text) - POINT(lng lat)
-      else if (l is String) {
-        if (l.startsWith('POINT')) {
+      else if (rawLoc is String) {
+        if (rawLoc.startsWith('POINT')) {
            try {
              // Remove POINT( and )
-             final content = l.replaceAll('POINT(', '').replaceAll(')', '');
+             final content = rawLoc.replaceAll('POINT(', '').replaceAll(')', '');
              final parts = content.split(' ');
              if (parts.length >= 2) {
                final lng = double.parse(parts[0]);

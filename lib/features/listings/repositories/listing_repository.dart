@@ -27,7 +27,7 @@ class ListingRepository {
   // Read: Stream of active listings
   Stream<List<Listing>> fetchActiveListings() {
     return _client
-        .from('listings')
+        .from('listings_view')
         .stream(primaryKey: ['id'])
         .eq('status', 'active')
         // Fix: Use snake_case created_at
@@ -40,7 +40,7 @@ class ListingRepository {
   // Read: Stream of user's own listings (Host view)
   Stream<List<Listing>> fetchUserListings(String hostUid) {
     return _client
-        .from('listings')
+        .from('listings_view')
         .stream(primaryKey: ['id'])
         // Fix: Use snake_case owner_id
         .eq('owner_id', hostUid)
@@ -63,7 +63,7 @@ class ListingRepository {
   // Read: Single listing
   Future<Listing?> fetchListing(String id) async {
     try {
-      final data = await _client.from('listings').select().eq('id', id).maybeSingle();
+      final data = await _client.from('listings_view').select().eq('id', id).maybeSingle();
       if (data == null) return null;
       return Listing.fromMap(data, id);
     } catch (e) {
