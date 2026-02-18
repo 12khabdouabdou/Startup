@@ -53,6 +53,8 @@ class Job {
 
   factory Job.fromMap(Map<String, dynamic> data, String id) {
     GeoPoint? parseGeo(dynamic loc) {
+      if (loc == null) return null;
+      // Handle Map (GeoJSON) - Standard Supabase Return
       if (loc is Map) {
          if (loc['type'] == 'Point' && loc['coordinates'] is List) {
              final coords = loc['coordinates'] as List;
@@ -60,13 +62,25 @@ class Job {
                  return GeoPoint(coords[1].toDouble(), coords[0].toDouble());
              }
          }
-         // Fallback
+         // Fallback lat/long map
          if (loc['latitude'] != null) {
             return GeoPoint(
               (loc['latitude'] as num).toDouble(),
               (loc['longitude'] as num).toDouble(),
             );
          }
+      }
+      // Handle String (WKT) - POINT(lng lat)
+      if (loc is String && loc.startsWith('POINT')) {
+         try {
+           final content = loc.replaceAll('POINT(', '').replaceAll(')', '');
+           final parts = content.split(' ');
+           if (parts.length >= 2) {
+             final lng = double.parse(parts[0]);
+             final lat = double.parse(parts[1]);
+             return GeoPoint(lat, lng);
+           }
+         } catch (_) {}
       }
       return null;
     }
@@ -104,12 +118,9 @@ class Job {
   }
 
   Map<String, dynamic> toMap() {
-    Map<String, dynamic>? geoToMap(GeoPoint? p) {
+    String? geoToWKT(GeoPoint? p) {
       if (p == null) return null;
-      return {
-        'type': 'Point',
-        'coordinates': [p.longitude, p.latitude]
-      };
+      return 'POINT(${p.longitude} ${p.latitude})';
     }
 
     return {
@@ -119,9 +130,9 @@ class Job {
       'hauler_name': haulerName,
       'status': status.name,
       'pickup_address': pickupAddress,
-      'pickup_location': geoToMap(pickupLocation),
+      'pickup_location': geoToWKT(pickupLocation),
       'dropoff_address': dropoffAddress,
-      'dropoff_location': geoToMap(dropoffLocation),
+      'dropoff_location': geoToWKT(dropoffLocation),
       'pickup_photo_url': pickupPhotoUrl,
       'dropoff_photo_url': dropoffPhotoUrl,
       'notes': notes,

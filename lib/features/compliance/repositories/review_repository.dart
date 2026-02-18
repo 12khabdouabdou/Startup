@@ -23,24 +23,26 @@ class Review {
   factory Review.fromMap(Map<String, dynamic> data, String id) {
     return Review(
       id: id,
-      jobId: data['jobId'] as String? ?? '',
-      reviewerUid: data['reviewerUid'] as String? ?? '',
-      revieweeUid: data['revieweeUid'] as String? ?? '',
+      jobId: (data['job_id'] ?? data['jobId']) as String? ?? '',
+      reviewerUid: (data['reviewer_uid'] ?? data['reviewerUid']) as String? ?? '',
+      revieweeUid: (data['reviewee_uid'] ?? data['revieweeUid']) as String? ?? '',
       rating: (data['rating'] as num?)?.toDouble() ?? 0.0,
       comment: data['comment'] as String?,
-      createdAt: (data['createdAt'] is String)
-          ? DateTime.parse(data['createdAt'] as String)
-          : DateTime.now(),
+      createdAt: (data['created_at'] is String)
+          ? DateTime.parse(data['created_at'] as String)
+          : (data['createdAt'] is String)
+              ? DateTime.parse(data['createdAt'] as String)
+              : DateTime.now(),
     );
   }
 
   Map<String, dynamic> toMap() => {
-    'jobId': jobId,
-    'reviewerUid': reviewerUid,
-    'revieweeUid': revieweeUid,
+    'job_id': jobId,
+    'reviewer_uid': reviewerUid,
+    'reviewee_uid': revieweeUid,
     'rating': rating,
     'comment': comment,
-    'createdAt': createdAt.toIso8601String(),
+    'created_at': createdAt.toIso8601String(),
   };
 }
 
@@ -53,7 +55,9 @@ class ReviewRepository {
     // Save review
     await _client.from('reviews').insert({
       ...review.toMap(),
-      'createdAt': DateTime.now().toIso8601String(),
+      // 'created_at' is already in toMap() if we constructed it correctly, 
+      // but to ensure server timestamp we can rely on default or send it.
+      // review.toMap() has it.
     });
 
     // Update the reviewee's aggregate rating
@@ -65,8 +69,8 @@ class ReviewRepository {
     return _client
         .from('reviews')
         .stream(primaryKey: ['id'])
-        .eq('revieweeUid', uid)
-        .order('createdAt', ascending: false)
+        .eq('reviewee_uid', uid)
+        .order('created_at', ascending: false)
         .map((data) => data.map((json) => Review.fromMap(json, json['id'] as String)).toList());
   }
 
@@ -75,8 +79,8 @@ class ReviewRepository {
     final data = await _client
         .from('reviews')
         .select()
-        .eq('jobId', jobId)
-        .eq('reviewerUid', reviewerUid)
+        .eq('job_id', jobId)
+        .eq('reviewer_uid', reviewerUid)
         .limit(1);
     return (data as List).isNotEmpty;
   }
@@ -85,8 +89,8 @@ class ReviewRepository {
   Future<void> _updateUserRating(String uid) async {
     final reviews = await _client
         .from('reviews')
-        .select()
-        .eq('revieweeUid', uid);
+        .select() // Selects all fields
+        .eq('reviewee_uid', uid);
 
     if ((reviews as List).isEmpty) return;
 
@@ -97,8 +101,8 @@ class ReviewRepository {
     final avg = total / reviews.length;
 
     await _client.from('users').update({
-      'averageRating': avg,
-      'totalReviews': reviews.length,
+      'average_rating': avg,
+      'total_reviews': reviews.length,
     }).eq('uid', uid);
   }
 }
