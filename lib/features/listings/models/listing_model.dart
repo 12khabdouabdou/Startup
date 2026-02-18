@@ -62,25 +62,34 @@ class Listing {
              loc = GeoPoint(rawLoc['latitude'], rawLoc['longitude']);
          }
       } 
-      // Handle string WKT (Well Known Text) - POINT(lng lat) or POINT (lng lat)
-      else if (rawLoc is String && rawLoc.trim().toUpperCase().startsWith('POINT')) {
-         try {
-           final content = rawLoc
-               .trim()
-               .toUpperCase()
-               .replaceAll('POINT', '')
-               .replaceAll('(', '')
-               .replaceAll(')', '')
-               .trim();
-           
-           final parts = content.split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
-           
-           if (parts.length >= 2) {
-             final lng = double.parse(parts[0]);
-             final lat = double.parse(parts[1]);
-             loc = GeoPoint(lat, lng);
-           }
-         } catch (_) {}
+      // Handle String (WKT or EWKT) - POINT(...) or SRID=...;POINT(...)
+      else if (rawLoc is String) {
+         String cleanLoc = rawLoc.trim().toUpperCase();
+         
+         if (cleanLoc.startsWith('SRID=')) {
+            final split = cleanLoc.split(';');
+            if (split.length > 1) {
+              cleanLoc = split[1].trim();
+            }
+         }
+
+         if (cleanLoc.startsWith('POINT')) {
+           try {
+             final content = cleanLoc
+                 .replaceAll('POINT', '')
+                 .replaceAll('(', '')
+                 .replaceAll(')', '')
+                 .trim();
+             
+             final parts = content.split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
+             
+             if (parts.length >= 2) {
+               final lng = double.parse(parts[0]);
+               final lat = double.parse(parts[1]);
+               loc = GeoPoint(lat, lng);
+             }
+           } catch (_) {}
+         }
       }
     }
 
