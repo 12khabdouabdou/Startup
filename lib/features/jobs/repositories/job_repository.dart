@@ -12,12 +12,20 @@ class JobRepository {
   // ─── Create ──────────────────────────────────────
   Future<String> createJob(Job job) async {
     final data = job.toMap();
-    // Start status as accepted if created by hauler accepting a listing?
-    // Or pending if created by host?
-    // We'll rely on the job object passed in.
+    // data['created_at'] is already set by toMap. 
     
+    // 1. Create the Job
     final response = await _client.from('jobs').insert(data).select().single();
-    return response['id'] as String;
+    final jobId = response['id'] as String;
+
+    // 2. Lock the Listing (Set status to 'pending' so it disappears from feed)
+    // This prevents other haulers from booking it simultaneously.
+    await _client.from('listings').update({
+      'status': 'pending', 
+      'updated_at': DateTime.now().toIso8601String()
+    }).eq('id', job.listingId);
+
+    return jobId;
   }
 
   // ─── Read ────────────────────────────────────────
@@ -78,7 +86,20 @@ class JobRepository {
   }
 
   Future<void> cancelJob(String jobId) async {
+    // 1. Fetch job to get listing_id
+    final jobs = await _client.from('jobs').select('listing_id').eq('id', jobId).maybeSingle();
+    final listingId = jobs?['listing_id'] as String?;
+
+    // 2. Cancel Job
     await updateJobStatus(jobId, JobStatus.cancelled);
+
+    // 3. Re-activate Listing (if linked)
+    if (listingId != null) {
+      await _client.from('listings').update({
+        'status': 'active', // Make it visible again
+        'updated_at': DateTime.now().toIso8601String()
+      }).eq('id', listingId);
+    }
   }
 
   // ─── Photo Verification ──────────────────────────
