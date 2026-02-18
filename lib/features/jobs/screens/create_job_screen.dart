@@ -82,6 +82,13 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    // Enforce Dropoff Map Selection
+    if (_dropoffLocation == null) {
+       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please click the map icon to pick a dropoff location.')));
+       return;
+    }
+
     setState(() => _isSubmitting = true);
 
     try {
