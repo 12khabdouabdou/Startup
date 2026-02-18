@@ -107,3 +107,18 @@ final jobRepositoryProvider = Provider<JobRepository>((ref) {
 final availableJobsProvider = StreamProvider.autoDispose<List<Job>>((ref) {
   return ref.watch(jobRepositoryProvider).fetchAvailableJobs();
 });
+
+final myActiveJobProvider = StreamProvider.autoDispose<Job?>((ref) {
+  final user = ref.watch(authRepositoryProvider).currentUser;
+  if (user == null) return Stream.value(null);
+  
+  return ref.watch(jobRepositoryProvider)
+      .fetchHaulerJobs(user.id)
+      .map((jobs) {
+        try {
+          return jobs.firstWhere((j) => j.status != JobStatus.completed && j.status != JobStatus.cancelled);
+        } catch (_) {
+          return null;
+        }
+      });
+});

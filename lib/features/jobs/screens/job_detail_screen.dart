@@ -11,6 +11,7 @@ import '../../profile/providers/profile_provider.dart';
 import '../../messaging/repositories/chat_repository.dart';
 import '../../../core/models/app_user.dart';
 import '../../maps/widgets/job_route_map.dart';
+import 'package:url_launcher/url_launcher.dart'; // Added for external nav
 
 class JobDetailScreen extends ConsumerStatefulWidget {
   final String jobId;
@@ -214,6 +215,38 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     );
   }
 
+  Future<void> _launchExternalNavigation(double lat, double lng) async {
+    await showModalBottomSheet(
+      context: context, 
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            const Text('Navigate with', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.map, color: Colors.blue),
+              title: const Text('Google Maps'),
+              onTap: () {
+                Navigator.pop(context);
+                launchUrl(Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng'), mode: LaunchMode.externalApplication);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.directions_car, color: Colors.blueAccent),
+              title: const Text('Waze'),
+              onTap: () {
+                Navigator.pop(context);
+                launchUrl(Uri.parse('https://waze.com/ul?ll=$lat,$lng&navigate=yes'), mode: LaunchMode.externalApplication);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildActions(Job job) {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -331,6 +364,27 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
 
        return Column(
          children: [
+            if ((job.status == JobStatus.assigned || job.status == JobStatus.enRoute) && job.pickupLocation != null) ...[
+               SizedBox(
+                 width: double.infinity,
+                 child: OutlinedButton.icon(
+                   onPressed: () => _launchExternalNavigation(job.pickupLocation!.latitude, job.pickupLocation!.longitude),
+                   icon: const Icon(Icons.map_outlined),
+                   label: const Text('Navigate to Pickup (Maps/Waze)'),
+                 ),
+               ),
+               const SizedBox(height: 12),
+            ] else if ((job.status == JobStatus.loaded || job.status == JobStatus.inTransit) && job.dropoffLocation != null) ...[
+               SizedBox(
+                 width: double.infinity,
+                 child: OutlinedButton.icon(
+                   onPressed: () => _launchExternalNavigation(job.dropoffLocation!.latitude, job.dropoffLocation!.longitude),
+                   icon: const Icon(Icons.map_outlined),
+                   label: const Text('Navigate to Dropoff (Maps/Waze)'),
+                 ),
+               ),
+               const SizedBox(height: 12),
+            ],
            SizedBox(width: double.infinity, child: actionButton),
            
            if (job.status == JobStatus.assigned || job.status == JobStatus.enRoute) ...[
