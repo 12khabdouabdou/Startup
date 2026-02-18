@@ -21,11 +21,12 @@ class JobRepository {
   }
 
   // ─── Read ────────────────────────────────────────
+  // ─── Read ────────────────────────────────────────
   Stream<List<Job>> fetchAvailableJobs() {
     return _client
         .from('jobs')
         .stream(primaryKey: ['id'])
-        .eq('status', 'pending')
+        .eq('status', JobStatus.open.name)
         .order('created_at', ascending: false)
         .map((data) => data.map((json) => Job.fromMap(json, json['id'] as String)).toList());
   }
@@ -64,7 +65,7 @@ class JobRepository {
     await _client.from('jobs').update({
       'hauler_uid': haulerUid,
       'hauler_name': haulerName,
-      'status': JobStatus.accepted.name,
+      'status': JobStatus.assigned.name,
       'updated_at': DateTime.now().toIso8601String(),
     }).eq('id', jobId);
   }

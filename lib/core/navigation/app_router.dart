@@ -11,8 +11,11 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/listings/screens/home_screen.dart';
 import '../../features/map/screens/map_screen.dart';
 import '../../features/jobs/screens/activity_screen.dart';
+import '../../features/jobs/screens/create_job_screen.dart'; // Create Job
 import '../../features/jobs/screens/hauler_job_board_screen.dart';
 import '../../features/jobs/screens/job_detail_screen.dart';
+
+
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/listings/screens/listing_detail_screen.dart';
 import '../../features/listings/models/listing_model.dart';
@@ -183,6 +186,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             listingId: state.pathParameters['id'] ?? '',
             listing: listing,
           );
+        },
+      ),
+      GoRoute(
+        path: '/jobs/create',
+        builder: (context, state) {
+           final extra = state.extra as Map<String, dynamic>? ?? {};
+           return CreateJobScreen(
+             listingId: extra['listingId'] as String? ?? '',
+             hostUid: extra['hostUid'] as String? ?? '',
+             initialMaterial: extra['material'] as String?,
+             initialQuantity: (extra['quantity'] as num?)?.toDouble(),
+           );
         },
       ),
       GoRoute(

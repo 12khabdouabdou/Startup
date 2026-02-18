@@ -86,6 +86,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               const Text('Connection error', style: TextStyle(fontSize: 12)),
           ],
         ),
+        actions: [
+          if (chat?.listingId.isNotEmpty == true)
+             IconButton(
+               icon: const Icon(Icons.local_shipping),
+               tooltip: 'Create Haul Request',
+               onPressed: () => context.push('/jobs/create', extra: {
+                 'listingId': chat!.listingId,
+                 'hostUid': otherUid,
+               }),
+             ),
+        ],
       ),
       body: Column(
         children: [

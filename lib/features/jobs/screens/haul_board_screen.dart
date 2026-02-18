@@ -4,12 +4,11 @@ import '../models/job_model.dart';
 import '../repositories/job_repository.dart';
 import '../../auth/repositories/auth_repository.dart';
 
-class HaulerJobBoardScreen extends ConsumerWidget {
-  const HaulerJobBoardScreen({super.key});
+class HaulBoardScreen extends ConsumerWidget {
+  const HaulBoardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watches 'availableJobsProvider' (Open Jobs) instead of Listings
     final jobsAsync = ref.watch(availableJobsProvider);
 
     return Scaffold(
@@ -20,60 +19,55 @@ class HaulerJobBoardScreen extends ConsumerWidget {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.local_shipping_outlined, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text('No haul requests available.', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
-                  const SizedBox(height: 8),
-                  Text('Wait for excavators/developers to post loads.', style: TextStyle(fontSize: 14, color: Colors.grey[500])),
+                children: const [
+                  Icon(Icons.local_shipping_outlined, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text('No open jobs available right now.', style: TextStyle(fontSize: 16, color: Colors.grey)),
                 ],
               ),
             );
           }
-          return RefreshIndicator(
-             onRefresh: () async => ref.invalidate(availableJobsProvider),
-             child: ListView.builder(
-              itemCount: jobs.length,
-              itemBuilder: (context, index) {
-                final job = jobs[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  elevation: 2,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: const CircleAvatar(
-                      backgroundColor: Colors.blue,
-                      child: Icon(Icons.location_on, color: Colors.white),
-                    ),
-                    title: Text(
-                      '${job.pickupAddress ?? "Unknown"} \n→ ${job.dropoffAddress ?? "Unknown"}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        '${job.material ?? "Material"} • ${job.quantity ?? 0} m³\n${job.notes ?? ""}',
-                        maxLines: 2, 
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    isThreeLine: true,
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          job.priceOffer != null ? '\$${job.priceOffer}' : 'Open',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 16),
-                        ),
-                        const SizedBox(height: 4),
-                        const Icon(Icons.chevron_right, color: Colors.grey),
-                      ],
-                    ),
-                    onTap: () => _showJobDetails(context, ref, job),
+          return ListView.builder(
+            itemCount: jobs.length,
+            itemBuilder: (context, index) {
+              final job = jobs[index];
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                elevation: 2,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  leading: const CircleAvatar(
+                    backgroundColor: Colors.blue,
+                    child: Icon(Icons.location_on, color: Colors.white),
                   ),
-                );
-              },
-            ),
+                  title: Text(
+                    '${job.pickupAddress ?? "Unknown"} \n→ ${job.dropoffAddress ?? "Unknown"}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      '${job.material ?? "Material"} • ${job.quantity ?? 0} m³\n${job.notes ?? ""}',
+                      maxLines: 2, 
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  isThreeLine: true,
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        job.priceOffer != null ? '\$${job.priceOffer}' : 'Open',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 16),
+                      ),
+                      const SizedBox(height: 4),
+                      const Icon(Icons.chevron_right, color: Colors.grey),
+                    ],
+                  ),
+                  onTap: () => _showJobDetails(context, ref, job),
+                ),
+              );
+            },
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -119,7 +113,7 @@ class HaulerJobBoardScreen extends ConsumerWidget {
                     user.companyName ?? user.displayName ?? 'Hauler'
                   );
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Accepted! Check Activity tab.')));
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Accepted! check Activity tab.')));
                   }
                 }
               } catch (e) {

@@ -1,8 +1,9 @@
 import '../../../core/models/geo_point.dart';
 
 enum JobStatus {
-  pending,    // Job created, waiting for hauler
-  accepted,   // Hauler accepted
+  open,       // New: Job posted, waiting for hauler
+  pending,    // Legacy: Job created with hauler (or pending approval)
+  assigned,   // Hauler accepted / Assigned
   enRoute,    // Hauler driving to pickup
   atPickup,   // Hauler arrived at pickup
   loaded,     // Material loaded onto truck
@@ -16,7 +17,7 @@ class Job {
   final String id;
   final String listingId;
   final String hostUid;        // Excavator/Developer who posted the listing
-  final String? haulerUid;     // Hauler assigned to the job
+  final String? haulerUid;     // Hauler assigned to the job (nullable for open jobs)
   final String? haulerName;
   final JobStatus status;
   final String? pickupAddress;
@@ -28,6 +29,7 @@ class Job {
   final String? notes;
   final double? quantity;
   final String? material;
+  final double? priceOffer;    // New: Price offered for the haul
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -35,9 +37,9 @@ class Job {
     required this.id,
     required this.listingId,
     required this.hostUid,
-    this.haulerUid,
+    this.haulerUid, // Allow null
     this.haulerName,
-    this.status = JobStatus.pending,
+    this.status = JobStatus.open, // Default to open if not specified
     this.pickupAddress,
     this.pickupLocation,
     this.dropoffAddress,
@@ -47,6 +49,7 @@ class Job {
     this.notes,
     this.quantity,
     this.material,
+    this.priceOffer,
     required this.createdAt,
     this.updatedAt,
   });
@@ -92,8 +95,8 @@ class Job {
       haulerUid: (data['hauler_uid'] ?? data['haulerUid']) as String?,
       haulerName: (data['hauler_name'] ?? data['haulerName']) as String?,
       status: JobStatus.values.firstWhere(
-        (e) => e.name == (data['status'] as String? ?? 'pending'),
-        orElse: () => JobStatus.pending,
+        (e) => e.name == (data['status'] as String? ?? 'open'),
+        orElse: () => JobStatus.open,
       ),
       pickupAddress: (data['pickup_address'] ?? data['pickupAddress']) as String?,
       pickupLocation: parseGeo((data['pickup_location'] ?? data['pickupLocation'])),
@@ -104,6 +107,7 @@ class Job {
       notes: data['notes'] as String?,
       quantity: (data['quantity'] as num?)?.toDouble(),
       material: data['material'] as String?,
+      priceOffer: (data['price_offer'] as num?)?.toDouble(),
       createdAt: (data['created_at'] is String)
           ? DateTime.parse(data['created_at'] as String)
           : (data['createdAt'] is String)
@@ -138,6 +142,7 @@ class Job {
       'notes': notes,
       'quantity': quantity,
       'material': material,
+      'price_offer': priceOffer,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -159,6 +164,7 @@ class Job {
     String? notes,
     double? quantity,
     String? material,
+    double? priceOffer,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -178,6 +184,7 @@ class Job {
       notes: notes ?? this.notes,
       quantity: quantity ?? this.quantity,
       material: material ?? this.material,
+      priceOffer: priceOffer ?? this.priceOffer,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
