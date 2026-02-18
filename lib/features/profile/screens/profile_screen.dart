@@ -5,6 +5,7 @@ import '../../profile/providers/profile_provider.dart';
 import '../../auth/repositories/auth_repository.dart';
 import '../../../core/models/mock_data.dart';
 import '../../../core/models/app_user.dart';
+import '../../notifications/widgets/notification_bell.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -18,9 +19,14 @@ class ProfileScreen extends ConsumerWidget {
         if (user == null) {
           return const Center(child: Text('No profile data'));
         }
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Profile'),
+            actions: const [NotificationBell()],
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
             children: [
               // Avatar
               CircleAvatar(
@@ -129,8 +135,10 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ],
             ],
+            ],
           ),
-        );
+        ),
+      );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, _) => Center(child: Text('Error: $err')),

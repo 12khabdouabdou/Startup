@@ -10,7 +10,7 @@ class NotificationCenterScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notificationsAsync = ref.watch(userNotificationsProvider);
+    final notificationsAsync = ref.watch(notificationsProvider);
     final theme = Theme.of(context);
 
     return Scaffold(

@@ -10,6 +10,7 @@ import '../../jobs/repositories/job_repository.dart';
 import '../../auth/repositories/auth_repository.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../../../core/models/app_user.dart';
+import '../../notifications/widgets/notification_bell.dart';
 
 // myListingsProvider is imported from listing_repository.dart
 
@@ -45,7 +46,10 @@ class _HaulerActivityView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final jobsAsync = ref.watch(myJobsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('My Jobs')),
+      appBar: AppBar(
+        title: const Text('My Jobs'),
+        actions: const [NotificationBell()],
+      ),
       body: jobsAsync.when(
         data: (jobs) {
           if (jobs.isEmpty) {
@@ -85,30 +89,32 @@ class _HostActivityView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return DefaultTabController(
       length: 2,
-      child: Column(
-        children: [
-          const TabBar(
-            tabs: [
-              Tab(text: 'My Listings'),
-              Tab(text: 'Active Jobs'),
-            ],
-            labelColor: Colors.blue,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: Colors.blue,
-          ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _HostListingsTab(),
-                _HostJobsTab(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('My Activity'), 
+          actions: const [NotificationBell()],
+          bottom: const TabBar(
+              tabs: [
+                Tab(text: 'My Listings'),
+                Tab(text: 'Active Jobs'),
               ],
-            ),
+              labelColor: Colors.blue,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: Colors.blue,
           ),
-        ],
+        ),
+        body: const TabBarView(
+          children: [
+            _HostListingsTab(),
+            _HostJobsTab(),
+          ],
+        ),
       ),
     );
   }
 }
+
+
 
 class _HostListingsTab extends ConsumerWidget {
   @override
