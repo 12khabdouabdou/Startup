@@ -7,6 +7,7 @@ import '../widgets/listing_card.dart';
 import '../../notifications/repositories/notification_repository.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../../../core/models/app_user.dart';
+import '../../alerts/widgets/create_alert_dialog.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -141,6 +142,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               : 'No listings match your filters.',
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (_) => CreateAlertDialog(initialMaterial: _materialFilter),
+                            );
+                          },
+                          icon: const Icon(Icons.notifications_active),
+                          label: const Text('Get Notified for New Listings'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue[100],
+                            foregroundColor: Colors.blue[900],
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          ),
                         ),
                       ],
                     ),
