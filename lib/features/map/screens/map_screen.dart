@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../listings/models/listing_model.dart';
+import '../services/routing_service.dart';
 import '../../listings/repositories/listing_repository.dart';
 import '../../jobs/models/job_model.dart';
 import '../../jobs/repositories/job_repository.dart';
@@ -119,7 +120,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 }
 
 // ─── ACTIVE JOB MAP (Navigation Mode) ─────────────────────────────
-class _ActiveJobMap extends ConsumerWidget {
+// ─── ACTIVE JOB MAP (Navigation Mode) ─────────────────────────────
+class _ActiveJobMap extends ConsumerStatefulWidget {
   final Job job;
   final MapController mapController;
   final LatLng? currentLocation;
@@ -132,23 +134,89 @@ class _ActiveJobMap extends ConsumerWidget {
     required this.onRecenter,
   });
 
-  Future<void> _launchExternalNav(BuildContext context) async {
+  @override
+  ConsumerState<_ActiveJobMap> createState() => _ActiveJobMapState();
+}
+
+class _ActiveJobMapState extends ConsumerState<_ActiveJobMap> {
+  List<LatLng> _routePoints = [];
+  bool _isLoadingRoute = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRoute();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ActiveJobMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.job.pickupLocation != widget.job.pickupLocation ||
+        oldWidget.job.dropoffLocation != widget.job.dropoffLocation) {
+      _fetchRoute();
+    }
+  }
+
+  Future<void> _fetchRoute() async {
+    final pickup = widget.job.pickupLocation;
+    final dropoff = widget.job.dropoffLocation;
+
+    if (pickup == null || dropoff == null) return;
+
+    setState(() => _isLoadingRoute = true);
+    
+    // For now, simple direct route implementation or use a real service
+    // In a real app, this would call RoutingService().getRoute(...)
+    // We will assume RoutingService is available via import
+    // Note: Since RoutingService is not injected via Riverpod yet, we instantiate directly or use a provider if verified.
+    // For simplicity in this fix, we instantiate the service directly here.
+    
+    try {
+      final start = LatLng(pickup.latitude, pickup.longitude);
+      final end = LatLng(dropoff.latitude, dropoff.longitude);
+      
+      final route = await RoutingService().getRoute(start, end);
+      
+      if (mounted) {
+        setState(() {
+          _routePoints = route;
+          _isLoadingRoute = false;
+        });
+        
+        // Fit bounds to show the whole route
+        if (_routePoints.isNotEmpty) {
+           // Simple bounds fitting (could be improved with CameraFit)
+           // widget.mapController.fitCamera(CameraFit.bounds(bounds: LatLngBounds.fromPoints(_routePoints)));
+           // Not calling automatically to avoid jarring jumps if user is panning.
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingRoute = false);
+        // Fallback to straight line if service fails
+        // handled in build check
+      }
+    }
+  }
+
+  Future<void> _launchExternalNav() async {
     double? lat, lng;
     String label = '';
     
-    if (job.status == JobStatus.assigned || job.status == JobStatus.enRoute) {
-       lat = job.pickupLocation?.latitude;
-       lng = job.pickupLocation?.longitude;
+    // Determine destination based on job status
+    if (widget.job.status == JobStatus.assigned || widget.job.status == JobStatus.enRoute) {
+       lat = widget.job.pickupLocation?.latitude;
+       lng = widget.job.pickupLocation?.longitude;
        label = 'Pickup';
     } else {
-       lat = job.dropoffLocation?.latitude;
-       lng = job.dropoffLocation?.longitude;
+       lat = widget.job.dropoffLocation?.latitude;
+       lng = widget.job.dropoffLocation?.longitude;
        label = 'Dropoff';
     }
 
     if (lat == null || lng == null) return;
 
-     showModalBottomSheet(
+    showModalBottomSheet(
       context: context,
       builder: (_) => SafeArea(
         child: Column(
@@ -180,17 +248,16 @@ class _ActiveJobMap extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Only show route if we have both points? No, show markers regardless.
-    final pickup = job.pickupLocation != null ? LatLng(job.pickupLocation!.latitude, job.pickupLocation!.longitude) : null;
-    final dropoff = job.dropoffLocation != null ? LatLng(job.dropoffLocation!.latitude, job.dropoffLocation!.longitude) : null;
+  Widget build(BuildContext context) {
+    final pickup = widget.job.pickupLocation != null ? LatLng(widget.job.pickupLocation!.latitude, widget.job.pickupLocation!.longitude) : null;
+    final dropoff = widget.job.dropoffLocation != null ? LatLng(widget.job.dropoffLocation!.latitude, widget.job.dropoffLocation!.longitude) : null;
     
     return Stack(
       children: [
         FlutterMap(
-          mapController: mapController,
+          mapController: widget.mapController,
           options: MapOptions(
-            initialCenter: pickup ?? dropoff ?? currentLocation ?? const LatLng(0,0),
+            initialCenter: pickup ?? dropoff ?? widget.currentLocation ?? const LatLng(0,0),
             initialZoom: 13.0,
             interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
           ),
@@ -199,21 +266,34 @@ class _ActiveJobMap extends ConsumerWidget {
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.fillexchange.app',
             ),
-            if (pickup != null && dropoff != null)
+            // Route Polyline
+            if (_routePoints.isNotEmpty)
               PolylineLayer(
+                polylines: [
+                  Polyline(
+                    points: _routePoints,
+                    strokeWidth: 5.0,
+                    color: Colors.blue,
+                  ),
+                ],
+              )
+            else if (pickup != null && dropoff != null)
+               // Fallback dotted line while loading or failed
+               PolylineLayer(
                 polylines: [
                   Polyline(
                     points: [pickup, dropoff],
                     strokeWidth: 4.0,
-                    color: Colors.blue.withOpacity(0.7),
+                    color: Colors.grey.withOpacity(0.5),
                     pattern: const StrokePattern.dotted(),
                   ),
                 ],
               ),
+              
             MarkerLayer(
               markers: [
-                if (currentLocation != null)
-                  Marker(point: currentLocation!, child: const Icon(Icons.airport_shuttle, color: Colors.blue, size: 30)),
+                if (widget.currentLocation != null)
+                  Marker(point: widget.currentLocation!, child: const Icon(Icons.airport_shuttle, color: Colors.blue, size: 30)),
                 if (pickup != null)
                   Marker(point: pickup, child: const Icon(Icons.location_on, color: Colors.green, size: 40)),
                 if (dropoff != null)
@@ -230,24 +310,24 @@ class _ActiveJobMap extends ConsumerWidget {
         Positioned(
           bottom: 20,
           left: 20,
-          right: 20, // Center buttons?
+          right: 20,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Card(
                 child: ListTile(
                   leading: Icon(Icons.info, color: Colors.blue[800]),
-                  title: Text('Active Job: ${job.material}'),
-                  subtitle: Text(job.status.name.toUpperCase()),
+                  title: Text('Active Job: ${widget.job.material}'),
+                  subtitle: Text(widget.job.status.name.toUpperCase()),
                   trailing: IconButton(
                     icon: const Icon(Icons.arrow_forward),
-                    onPressed: () => context.push('/jobs/${job.id}'),
+                    onPressed: () => context.push('/jobs/${widget.job.id}'),
                   ),
                 ),
               ),
               const SizedBox(height: 10),
               ElevatedButton.icon(
-                onPressed: () => _launchExternalNav(context),
+                onPressed: _launchExternalNav,
                 icon: const Icon(Icons.navigation),
                 label: const Text('Start Navigation'),
                 style: ElevatedButton.styleFrom(
@@ -259,6 +339,12 @@ class _ActiveJobMap extends ConsumerWidget {
             ],
           ),
         ),
+        if (_isLoadingRoute)
+           const Positioned(
+             top: 20, 
+             right: 20, 
+             child: CircularProgressIndicator()
+           ),
       ],
     );
   }
