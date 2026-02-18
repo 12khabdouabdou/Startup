@@ -44,9 +44,9 @@ class Listing {
     // Start with basic map check
     GeoPoint? loc;
     if (data['location'] != null) {
-      // Check if it's GeoJSON map
-      if (data['location'] is Map) {
-         final l = data['location'];
+      final l = data['location'];
+      // Check if it's GeoJSON map (Standard Supabase Select)
+      if (l is Map) {
          if (l['type'] == 'Point' && l['coordinates'] is List) {
              final coords = l['coordinates'] as List;
              if (coords.length >= 2) {
@@ -59,7 +59,21 @@ class Listing {
              loc = GeoPoint(l['latitude'], l['longitude']);
          }
       } 
-      // Handle string WKT if returned as string? Usually returns GeoJSON.
+      // Handle string WKT (Well Known Text) - POINT(lng lat)
+      else if (l is String) {
+        if (l.startsWith('POINT')) {
+           try {
+             // Remove POINT( and )
+             final content = l.replaceAll('POINT(', '').replaceAll(')', '');
+             final parts = content.split(' ');
+             if (parts.length >= 2) {
+               final lng = double.parse(parts[0]);
+               final lat = double.parse(parts[1]);
+               loc = GeoPoint(lat, lng);
+             }
+           } catch (_) {}
+        }
+      }
     }
 
     return Listing(
@@ -108,12 +122,9 @@ class Listing {
       'currency': currency,
       'description': description,
       'photos': photos,
-      // Store location as GeoJSON Point for PostGIS compatibility
+      // Store location as WKT String (POINT(lng lat)) for better compatibility with PostREST insert
       'location': location != null 
-          ? {
-              'type': 'Point',
-              'coordinates': [location!.longitude, location!.latitude] // [lng, lat]
-            } 
+          ? 'POINT(${location!.longitude} ${location!.latitude})'
           : null,
       'address': address,
       'status': status.name,
