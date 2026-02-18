@@ -68,6 +68,16 @@ class JobRepository {
         });
   }
 
+  // Helper to find job from listing
+  Future<String?> fetchJobIdForListing(String listingId) async {
+    final data = await _client
+        .from('jobs')
+        .select('id')
+        .eq('listing_id', listingId)
+        .maybeSingle();
+    return data?['id'] as String?;
+  }
+
   // ─── Status Transitions ──────────────────────────
   Future<void> acceptJob(String jobId, String haulerUid, String haulerName) async {
     await _client.from('jobs').update({

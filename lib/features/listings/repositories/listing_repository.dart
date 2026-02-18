@@ -44,6 +44,7 @@ class ListingRepository {
         .stream(primaryKey: ['id'])
         // Fix: Use snake_case owner_id
         .eq('owner_id', hostUid)
+        .neq('status', 'archived')
         .order('created_at', ascending: false)
         .map((data) {
             return data.map((json) => Listing.fromMap(json, json['id'] as String)).toList();

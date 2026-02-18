@@ -172,35 +172,62 @@ class ListingDetailScreen extends ConsumerWidget {
                         final role = userDoc.role;
 
                         if (isOwner) {
-                           return ElevatedButton.icon(
-                             onPressed: () async {
-                                 final confirm = await showDialog<bool>(
-                                   context: context,
-                                   builder: (c) => AlertDialog(
-                                     title: const Text('Delete Listing?'),
-                                     content: const Text('Are you sure you want to remove this listing?'),
-                                     actions: [
-                                       TextButton(onPressed: () => c.pop(false), child: const Text('Cancel')),
-                                       TextButton(onPressed: () => c.pop(true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
-                                     ],
+                           return Column(
+                             crossAxisAlignment: CrossAxisAlignment.stretch,
+                             children: [
+                               if (listing.status == ListingStatus.pending) ...[
+                                 ElevatedButton.icon(
+                                   onPressed: () async {
+                                     final jobId = await ref.read(jobRepositoryProvider).fetchJobIdForListing(listing.id);
+                                     if (jobId != null && context.mounted) {
+                                       context.push('/jobs/$jobId');
+                                     } else if (context.mounted) {
+                                       ScaffoldMessenger.of(context).showSnackBar(
+                                         const SnackBar(content: Text('Could not find associated job')),
+                                       );
+                                     }
+                                   },
+                                   icon: const Icon(Icons.visibility),
+                                   label: const Text('View Active Job'),
+                                   style: ElevatedButton.styleFrom(
+                                     backgroundColor: Colors.blue[600],
+                                     foregroundColor: Colors.white,
+                                     padding: const EdgeInsets.symmetric(vertical: 14),
                                    ),
-                                 );
+                                 ),
+                                 const SizedBox(height: 12),
+                               ],
+                               ElevatedButton.icon(
+                                 onPressed: () async {
+                                     final confirm = await showDialog<bool>(
+                                       context: context,
+                                       builder: (c) => AlertDialog(
+                                         title: const Text('Delete Listing?'),
+                                         content: const Text('Are you sure you want to remove this listing?'),
+                                         actions: [
+                                           TextButton(onPressed: () => c.pop(false), child: const Text('Cancel')),
+                                           TextButton(onPressed: () => c.pop(true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+                                         ],
+                                       ),
+                                     );
 
-                                 if (confirm == true) {
-                                   await ref.read(listingRepositoryProvider).archiveListing(listing.id);
-                                   if (context.mounted) {
-                                     context.pop();
-                                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing deleted')));
-                                   }
-                                 }
-                             },
-                             icon: const Icon(Icons.delete),
-                             label: const Text('Delete Listing'),
-                             style: ElevatedButton.styleFrom(
-                               backgroundColor: Colors.red,
-                               foregroundColor: Colors.white,
-                               padding: const EdgeInsets.symmetric(vertical: 14),
-                             ),
+                                     if (confirm == true) {
+                                       await ref.read(listingRepositoryProvider).archiveListing(listing.id);
+                                       if (context.mounted) {
+                                         context.pop();
+                                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing deleted')));
+                                       }
+                                     }
+                                 },
+                                 icon: const Icon(Icons.delete),
+                                 label: const Text('Delete Listing'),
+                                 style: ElevatedButton.styleFrom(
+                                   backgroundColor: Colors.red,
+                                   foregroundColor: Colors.white,
+                                   padding: const EdgeInsets.symmetric(vertical: 14),
+                                 ),
+                               ),
+                             ],
                            );
                         } 
                         
@@ -226,24 +253,34 @@ class ListingDetailScreen extends ConsumerWidget {
                             
                             if (role == UserRole.developer || role == UserRole.excavator) ...[
                                const SizedBox(height: 12),
-                               ElevatedButton.icon(
-                                  onPressed: () {
-                                     context.push('/jobs/create', extra: {
-                                        'listingId': listing.id,
-                                        'hostUid': currentUid, 
-                                        'material': listing.material.name,
-                                        'quantity': listing.quantity,
-                                        // location isn't passed in extra but CreateJob fetches it via listingId
-                                     });
-                                  },
-                                  icon: const Icon(Icons.local_shipping),
-                                  label: const Text('Post Haul Request'),
-                                  style: ElevatedButton.styleFrom(
-                                     backgroundColor: Colors.blue[800],
-                                     foregroundColor: Colors.white,
-                                     padding: const EdgeInsets.symmetric(vertical: 14),
+                               if (listing.status != ListingStatus.active)
+                                  ElevatedButton.icon(
+                                    onPressed: null,
+                                    icon: const Icon(Icons.lock_clock),
+                                    label: Text('Listing ${listing.status.name.toUpperCase()}'),
+                                    style: ElevatedButton.styleFrom(
+                                       padding: const EdgeInsets.symmetric(vertical: 14),
+                                    ),
+                                  )
+                               else
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                       context.push('/jobs/create', extra: {
+                                          'listingId': listing.id,
+                                          'hostUid': currentUid, 
+                                          'material': listing.material.name,
+                                          'quantity': listing.quantity,
+                                          // location isn't passed in extra but CreateJob fetches it via listingId
+                                       });
+                                    },
+                                    icon: const Icon(Icons.local_shipping),
+                                    label: const Text('Post Haul Request'),
+                                    style: ElevatedButton.styleFrom(
+                                       backgroundColor: Colors.blue[800],
+                                       foregroundColor: Colors.white,
+                                       padding: const EdgeInsets.symmetric(vertical: 14),
+                                    ),
                                   ),
-                               ),
                             ],
                           ],
                         );
