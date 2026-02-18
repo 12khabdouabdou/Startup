@@ -36,6 +36,7 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
   final _qtyController = TextEditingController();
   final _materialController = TextEditingController();
   GeoPoint? _dropoffLocation;
+  GeoPoint? _pickupLocation;
 
   bool _isSubmitting = false;
   bool _isLoadingListing = true;
@@ -53,6 +54,7 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
       if (listing != null) {
         setState(() {
           _listing = listing;
+          _pickupLocation = listing.location;
           _pickupController.text = listing.address ?? '';
           _materialController.text = listing.material.name;
           _qtyController.text = listing.quantity.toString();
@@ -83,9 +85,15 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     
-    // Enforce Dropoff Map Selection
+    // Enforce Map Selection
     if (_dropoffLocation == null) {
-       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please click the map icon to pick a dropoff location.')));
+       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a dropoff location on the map.')));
+       return;
+    }
+    
+    // Enforce Pickup Location (if listing didn't have one)
+    if (_pickupLocation == null) {
+       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a pickup location on the map.')));
        return;
     }
 
@@ -111,8 +119,9 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
         quantity: double.tryParse(_qtyController.text.trim()) ?? widget.initialQuantity ?? 0.0,
         notes: _notesController.text.trim(),
         createdAt: DateTime.now(),
-        pickupLocation: _listing?.location ?? const GeoPoint(0, 0),
-        dropoffLocation: _dropoffLocation ?? const GeoPoint(0, 0),
+        createdAt: DateTime.now(),
+        pickupLocation: _pickupLocation!,
+        dropoffLocation: _dropoffLocation!,
       );
 
       await ref.read(jobRepositoryProvider).createJob(job); 
@@ -170,10 +179,28 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
 
                   TextFormField(
                     controller: _pickupController,
-                    decoration: const InputDecoration(
-                      labelText: 'Pickup Address (From Listing)',
-                      prefixIcon: Icon(Icons.location_on),
-                      border: OutlineInputBorder(),
+                    readOnly: _listing?.location != null, // Only editable if listing lacks location
+                    decoration: InputDecoration(
+                      labelText: 'Pickup Address',
+                      prefixIcon: const Icon(Icons.location_on),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: _listing?.location == null 
+                        ? IconButton(
+                            icon: const Icon(Icons.map, color: Colors.blue),
+                            onPressed: () async {
+                               final result = await Navigator.push(
+                                 context,
+                                 MaterialPageRoute(builder: (c) => const LocationPickerScreen()), // No initial for new pickup
+                               );
+                               if (result is LocationResult) {
+                                   setState(() {
+                                      _pickupLocation = result.point;
+                                      _pickupController.text = result.address;
+                                   });
+                               }
+                            },
+                          )
+                        : null,
                     ),
                     validator: (v) => v?.isEmpty == true ? 'Required' : null,
                   ),
@@ -181,11 +208,24 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
                   
                   TextFormField(
                     controller: _dropoffController,
+                    readOnly: true, // Force map usage for accuracy? Or allow edit? Better readOnly to force map.
+                    onTap: () async {
+                         final result = await Navigator.push(
+                           context,
+                           MaterialPageRoute(builder: (c) => LocationPickerScreen(initialLocation: _dropoffLocation)),
+                         );
+                         if (result is LocationResult) {
+                             setState(() {
+                                _dropoffLocation = result.point;
+                                _dropoffController.text = result.address;
+                             });
+                         }
+                    },
                     decoration: InputDecoration(
                       labelText: 'Dropoff Address',
                       prefixIcon: const Icon(Icons.flag),
                       border: const OutlineInputBorder(),
-                      helperText: 'Enter destination address',
+                      helperText: 'Tap to select destination on map',
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.map, color: Colors.blue),
                         onPressed: () async {
@@ -194,15 +234,15 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
                              MaterialPageRoute(builder: (c) => LocationPickerScreen(initialLocation: _dropoffLocation)),
                            );
                            if (result is LocationResult) {
-                              setState(() {
-                                 _dropoffLocation = result.point;
-                                 _dropoffController.text = result.address;
-                              });
+                               setState(() {
+                                  _dropoffLocation = result.point;
+                                  _dropoffController.text = result.address;
+                               });
                            }
                         },
                       ),
                     ),
-                    validator: (v) => v?.isEmpty == true ? 'Required' : null,
+                    validator: (v) => _dropoffLocation == null ? 'Please select a location on map' : null,
                   ),
                   const SizedBox(height: 16),
 
