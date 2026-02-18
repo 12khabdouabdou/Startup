@@ -264,19 +264,21 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     final isHaulerRole = currentUser.role == UserRole.hauler; // Potential hauler
 
     if (isHost) {
-       if (job.status != JobStatus.completed && job.status != JobStatus.cancelled && job.haulerUid != null) {
+       if (job.status != JobStatus.completed && job.status != JobStatus.cancelled) {
           return Column(
             children: [
-               SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => _contactUser(job.haulerUid!, job.listingId),
-                  icon: const Icon(Icons.chat),
-                  label: const Text('Message Hauler'),
+               if (job.haulerUid != null) ...[
+                 SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _contactUser(job.haulerUid!, job.listingId),
+                    icon: const Icon(Icons.chat),
+                    label: const Text('Message Hauler'),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              if (job.status == JobStatus.open || job.status == JobStatus.pending)
+                const SizedBox(height: 10),
+               ],
+              if (job.status == JobStatus.open || job.status == JobStatus.pending || job.status == JobStatus.assigned)
                 OutlinedButton.icon(
                   onPressed: () => _cancelJob(job),
                   icon: const Icon(Icons.cancel),
