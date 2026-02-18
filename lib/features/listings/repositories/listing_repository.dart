@@ -59,6 +59,17 @@ class ListingRepository {
   Future<void> archiveListing(String id) async {
     await updateListing(id, {'status': 'archived'});
   }
+
+  // Read: Single listing
+  Future<Listing?> fetchListing(String id) async {
+    try {
+      final data = await _client.from('listings').select().eq('id', id).maybeSingle();
+      if (data == null) return null;
+      return Listing.fromMap(data, id);
+    } catch (e) {
+      return null;
+    }
+  }
 }
 
 final listingRepositoryProvider = Provider<ListingRepository>((ref) {
