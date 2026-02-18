@@ -3,13 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/job_model.dart';
 import '../repositories/job_repository.dart';
 import '../../auth/repositories/auth_repository.dart';
+import '../../profile/providers/profile_provider.dart';
+import '../../../core/widgets/verified_badge.dart';
 
 class HaulerJobBoardScreen extends ConsumerWidget {
   const HaulerJobBoardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watches 'availableJobsProvider' (Open Jobs) instead of Listings
     final jobsAsync = ref.watch(availableJobsProvider);
 
     return Scaffold(
@@ -24,54 +25,18 @@ class HaulerJobBoardScreen extends ConsumerWidget {
                   Icon(Icons.local_shipping_outlined, size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   Text('No haul requests available.', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
-                  const SizedBox(height: 8),
-                  Text('Wait for excavators/developers to post loads.', style: TextStyle(fontSize: 14, color: Colors.grey[500])),
                 ],
               ),
             );
           }
           return RefreshIndicator(
              onRefresh: () async => ref.invalidate(availableJobsProvider),
-             child: ListView.builder(
+             child: ListView.separated(
+              padding: const EdgeInsets.all(12),
               itemCount: jobs.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                final job = jobs[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  elevation: 2,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: const CircleAvatar(
-                      backgroundColor: Colors.blue,
-                      child: Icon(Icons.location_on, color: Colors.white),
-                    ),
-                    title: Text(
-                      '${job.pickupAddress ?? "Unknown"} \n→ ${job.dropoffAddress ?? "Unknown"}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        '${job.material ?? "Material"} • ${job.quantity ?? 0} m³\n${job.notes ?? ""}',
-                        maxLines: 2, 
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    isThreeLine: true,
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          job.priceOffer != null ? '\$${job.priceOffer}' : 'Open',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 16),
-                        ),
-                        const SizedBox(height: 4),
-                        const Icon(Icons.chevron_right, color: Colors.grey),
-                      ],
-                    ),
-                    onTap: () => _showJobDetails(context, ref, job),
-                  ),
-                );
+                return _JobRequestTile(job: jobs[index]);
               },
             ),
           );
@@ -81,8 +46,102 @@ class HaulerJobBoardScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  void _showJobDetails(BuildContext context, WidgetRef ref, Job job) {
+class _JobRequestTile extends ConsumerWidget {
+  final Job job;
+  const _JobRequestTile({required this.job});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Determine host info
+    final hostAsync = ref.watch(userProfileProvider(job.hostUid));
+    final host = hostAsync.value;
+    final isVerified = host?.isVerified ?? false;
+    final hostName = host?.fullName ?? 'Unknown User';
+
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        onTap: () => _showJobDetails(context, ref, job, hostName, isVerified),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header: Host Info + Price
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: Colors.grey[200],
+                    backgroundImage: host?.companyName != null ? null : null, // Todo: Logo
+                    child: Text(hostName[0].toUpperCase(), style: const TextStyle(fontSize: 12)),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(hostName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  if (isVerified) const VerifiedBadge(size: 14),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green[200]!),
+                    ),
+                    child: Text(
+                      job.priceOffer != null ? '\$${job.priceOffer}' : 'Open Offer',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green[800]),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              // Route
+              Row(
+                children: [
+                  const Icon(Icons.circle, size: 12, color: Colors.blue),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(job.pickupAddress ?? 'Unknown Pickup', maxLines: 1, overflow: TextOverflow.ellipsis)),
+                ],
+              ),
+              Container(
+                margin: const EdgeInsets.only(left: 5),
+                height: 16,
+                decoration: BoxDecoration(
+                  border: Border(left: BorderSide(color: Colors.grey[300]!, width: 2)),
+                ),
+              ),
+              Row(
+                children: [
+                  const Icon(Icons.location_on, size: 12, color: Colors.red),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(job.dropoffAddress ?? 'Unknown Dropoff', maxLines: 1, overflow: TextOverflow.ellipsis)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Material Info
+              Row(
+                children: [
+                  Icon(Icons.category, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(job.material ?? 'Dirt'),
+                  const SizedBox(width: 16),
+                  Icon(Icons.scale, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text('${job.quantity?.toStringAsFixed(1) ?? "0"} m³'),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showJobDetails(BuildContext context, WidgetRef ref, Job job, String hostName, bool isVerified) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -92,15 +151,25 @@ class HaulerJobBoardScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _infoRow(Icons.upload, 'Pickup', job.pickupAddress),
-              _infoRow(Icons.download, 'Dropoff', job.dropoffAddress),
+              Row(
+                children: [
+                  const Text('Posted by: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(hostName),
+                  if (isVerified) const VerifiedBadge(size: 16),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _detailRow(Icons.upload, 'Pickup', job.pickupAddress),
+              _detailRow(Icons.download, 'Dropoff', job.dropoffAddress),
               const Divider(),
-              _infoRow(Icons.category, 'Material', job.material),
-              _infoRow(Icons.scale, 'Quantity', '${job.quantity ?? 0} m³'),
-              _infoRow(Icons.attach_money, 'Offer', job.priceOffer != null ? '\$${job.priceOffer}' : 'Negotiable'),
+              _detailRow(Icons.category, 'Material', job.material),
+              _detailRow(Icons.scale, 'Quantity', '${job.quantity ?? 0} m³'),
+              _detailRow(Icons.attach_money, 'Offer', job.priceOffer != null ? '\$${job.priceOffer}' : 'Negotiable'),
               const SizedBox(height: 8),
-              const Text('Notes:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(job.notes ?? "None"),
+              if (job.notes?.isNotEmpty == true) ...[
+                const Text('Notes:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(job.notes!),
+              ],
             ],
           ),
         ),
@@ -119,7 +188,7 @@ class HaulerJobBoardScreen extends ConsumerWidget {
                     user.companyName ?? user.displayName ?? 'Hauler'
                   );
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Accepted! Check Activity tab.')));
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Accepted!')));
                   }
                 }
               } catch (e) {
@@ -135,12 +204,13 @@ class HaulerJobBoardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _infoRow(IconData icon, String label, String? value) {
+  Widget _detailRow(IconData icon, String label, String? value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: Colors.grey),
+          Icon(icon, size: 18, color: Colors.grey),
           const SizedBox(width: 8),
           Expanded(
             child: RichText(

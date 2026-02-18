@@ -14,6 +14,7 @@ class AppUser {
   final int? fleetSize;
   final double rating;
   final int reviewCount;
+  final bool isVerified;
 
   // Getters for compatibility
   String get id => uid;
@@ -33,6 +34,7 @@ class AppUser {
     this.fleetSize,
     this.rating = 0.0,
     this.reviewCount = 0,
+    this.isVerified = false,
   });
 
   factory AppUser.fromMap(Map<String, dynamic> data, String uid) {
@@ -59,6 +61,7 @@ class AppUser {
       fleetSize: data['fleet_size'] as int?,
       rating: (data['rating'] as num?)?.toDouble() ?? 0.0,
       reviewCount: (data['review_count'] as num?)?.toInt() ?? 0,
+      isVerified: data['is_verified'] as bool? ?? false,
     );
   }
 
@@ -75,6 +78,7 @@ class AppUser {
       'fleet_size': fleetSize,
       'rating': rating,
       'review_count': reviewCount,
+      'is_verified': isVerified,
     };
   }
 }
