@@ -6,6 +6,7 @@ import '../repositories/chat_repository.dart';
 import '../../auth/repositories/auth_repository.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../../../core/models/app_user.dart';
+import 'package:go_router/go_router.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String chatId;
@@ -87,16 +88,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
         actions: [
-          if (chat?.listingId.isNotEmpty == true)
+          if (chat?.listingId?.isNotEmpty == true)
              IconButton(
                icon: const Icon(Icons.local_shipping),
                tooltip: 'Create Haul Request',
                onPressed: () => context.push('/jobs/create', extra: {
                  'listingId': chat!.listingId,
-                 'hostUid': otherUid,
+                 'hostUid': otherUid, // Pass hostUid so CreateJob knows who to notify
                }),
              ),
         ],
+      ),
       ),
       body: Column(
         children: [

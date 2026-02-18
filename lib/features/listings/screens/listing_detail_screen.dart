@@ -156,19 +156,17 @@ class ListingDetailScreen extends ConsumerWidget {
                     width: double.infinity,
                     child: Consumer(
                       builder: (context, ref, child) {
-                        final currentUid = ref.read(authRepositoryProvider).currentUser?.id;
-                        final userDocAsync = ref.watch(userDocProvider);
+                        final currentUid = ref.watch(authRepositoryProvider).currentUser?.id;
                         if (currentUid == null) return const SizedBox();
 
                         final isOwner = currentUid == listing.hostUid;
-                        final isHauler = userDocAsync.valueOrNull?.role == UserRole.hauler;
                         
                         // Action Logic
                         VoidCallback? onPressed;
                         IconData icon = Icons.chat;
                         String label = 'Contact Poster';
-                        Color? bgColor;
-                        Color? fgColor;
+                        Color? bgColor = Colors.blue;
+                        Color? fgColor = Colors.white;
 
                         if (isOwner) {
                            icon = Icons.delete;
@@ -176,92 +174,35 @@ class ListingDetailScreen extends ConsumerWidget {
                            bgColor = Colors.red;
                            fgColor = Colors.white;
                            onPressed = () async {
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (c) => AlertDialog(
-                                  title: const Text('Delete Listing?'),
-                                  content: const Text('Are you sure you want to remove this listing?'),
-                                  actions: [
-                                    TextButton(onPressed: () => c.pop(false), child: const Text('Cancel')),
-                                    TextButton(onPressed: () => c.pop(true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
-                                  ],
-                                ),
-                              );
+                               final confirm = await showDialog<bool>(
+                                 context: context,
+                                 builder: (c) => AlertDialog(
+                                   title: const Text('Delete Listing?'),
+                                   content: const Text('Are you sure you want to remove this listing?'),
+                                   actions: [
+                                     TextButton(onPressed: () => c.pop(false), child: const Text('Cancel')),
+                                     TextButton(onPressed: () => c.pop(true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+                                   ],
+                                 ),
+                               );
 
-                              if (confirm == true) {
-                                await ref.read(listingRepositoryProvider).archiveListing(listing.id);
-                                if (context.mounted) {
-                                  context.pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing deleted')));
-                                }
-                              }
-                           };
-                        } else if (isHauler) {
-                           // Hauler Logic
-                           icon = Icons.local_shipping;
-                           label = 'Accept Haul (Create Job)';
-                           bgColor = Colors.blue[700];
-                           fgColor = Colors.white;
-                           onPressed = () async {
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (c) => AlertDialog(
-                                  title: const Text('Accept Job?'),
-                                  content: const Text('Do you want to accept this haul request? This will create a Job and notify the poster.'),
-                                  actions: [
-                                    TextButton(onPressed: () => c.pop(false), child: const Text('Cancel')),
-                                    TextButton(onPressed: () => c.pop(true), child: const Text('Accept', style: TextStyle(fontWeight: FontWeight.bold))),
-                                  ],
-                                ),
-                              );
-                              
-                              if (confirm == true) {
-                                 try {
-                                   final haulerUid = currentUid;
-                                   // Create Job
-                                   final job = Job(
-                                      id: '', // database gen
-                                      listingId: listing.id,
-                                      hostUid: listing.hostUid,
-                                      haulerUid: haulerUid,
-                                      // haulerName requires fetching or relying on profile. 
-                                      // Ideally backend triggers fill this but we can pass it if we have it?
-                                      // using userDoc display name
-                                      haulerName: userDocAsync.valueOrNull?.displayName ?? 'Hauler',
-                                      status: JobStatus.accepted,
-                                      quantity: listing.quantity,
-                                      material: listing.material.name,
-                                      pickupAddress: listing.address,
-                                      pickupLocation: listing.location,
-                                      createdAt: DateTime.now(),
-                                   );
-                                   
-                                   final jobId = await ref.read(jobRepositoryProvider).createJob(job);
-                                   
-                                   // Mark Listing Booked
-                                   await ref.read(listingRepositoryProvider).updateListing(listing.id, {'status': 'booked'});
-                                   
-                                   if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Created Successfully!')));
-                                      // Navigate to Job?
-                                      // context.go('/jobs/$jobId'); 
-                                      // or just back
-                                      context.pop(); 
-                                   }
-                                 } catch (e) {
-                                   if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                               if (confirm == true) {
+                                 await ref.read(listingRepositoryProvider).archiveListing(listing.id);
+                                 if (context.mounted) {
+                                   context.pop();
+                                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing deleted')));
                                  }
-                              }
+                               }
                            };
                         } else {
-                           // Default / Chat
+                           // Default / Chat (For Haulers and Developers)
                            onPressed = () async {
-                              final chatId = await ref.read(chatRepositoryProvider).getOrCreateChat(
-                                currentUid: currentUid,
-                                otherUid: listing.hostUid,
-                                listingId: listing.id,
-                              );
-                              if (context.mounted) context.push('/chat/$chatId');
+                               final chatId = await ref.read(chatRepositoryProvider).getOrCreateChat(
+                                 currentUid: currentUid,
+                                 otherUid: listing.hostUid,
+                                 listingId: listing.id,
+                               );
+                               if (context.mounted) context.push('/chat/$chatId');
                            };
                         }
 

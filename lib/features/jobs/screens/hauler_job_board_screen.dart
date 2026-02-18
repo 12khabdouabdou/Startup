@@ -180,15 +180,21 @@ class _JobRequestTile extends ConsumerWidget {
             onPressed: () async {
               Navigator.pop(ctx);
               try {
-                final user = ref.read(authRepositoryProvider).currentUser;
+                // Use AppUser from profile provider
+                final user = ref.read(userDocProvider).valueOrNull; // Use AppUser
+                
                 if (user != null) {
                   await ref.read(jobRepositoryProvider).acceptJob(
                     job.id, 
-                    user.id, 
+                    user.uid, 
                     user.companyName ?? user.displayName ?? 'Hauler'
                   );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Accepted!')));
+                  }
+                } else {
+                   if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error: User profile not loaded')));
                   }
                 }
               } catch (e) {

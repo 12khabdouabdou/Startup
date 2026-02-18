@@ -9,6 +9,7 @@ import '../../auth/repositories/auth_repository.dart';
 import '../../../core/services/storage_service.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../../messaging/repositories/chat_repository.dart';
+import '../../../core/models/app_user.dart';
 
 class JobDetailScreen extends ConsumerStatefulWidget {
   final String jobId;
@@ -33,6 +34,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
         user.id,
         profile?.displayName ?? 'Hauler',
       );
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Accepted!')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
@@ -58,10 +60,6 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     setState(() => _isLoading = true);
     try {
       await ref.read(jobRepositoryProvider).cancelJob(job.id);
-      // Also should set listing back to active?
-      // Typically yes, if job is cancelled, listing should be re-opened.
-      // But JobRepository doesn't know about ListingRepository.
-      // We should do it here.
       await ref.read(listingRepositoryProvider).updateListing(job.listingId, {'status': 'active'});
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Cancelled')));
     } catch (e) {
@@ -147,11 +145,9 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Status Banner
                 _StatusBanner(status: job.status),
                 const SizedBox(height: 24),
 
-                // Job Info
                 _InfoSection(title: 'Material', value: '${job.material ?? "N/A"} — ${job.quantity?.toStringAsFixed(0) ?? "?"} units'),
                 const SizedBox(height: 12),
                 if (job.pickupAddress != null)
@@ -164,6 +160,10 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                   const SizedBox(height: 12),
                   _InfoSection(title: 'Hauler', value: job.haulerName!),
                 ],
+                if (job.priceOffer != null) ...[
+                   const SizedBox(height: 12),
+                   _InfoSection(title: 'Offer', value: '\$${job.priceOffer!.toStringAsFixed(2)}', icon: Icons.attach_money, iconColor: Colors.amber),
+                ],
                 if (job.notes != null && job.notes!.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   _InfoSection(title: 'Notes', value: job.notes!),
@@ -171,7 +171,6 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
 
                 const SizedBox(height: 24),
 
-                // Photos Section
                 if (job.pickupPhotoUrl != null) ...[
                   const Text('Pickup Photo', style: TextStyle(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
@@ -198,7 +197,6 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                 const Divider(),
                 const SizedBox(height: 16),
 
-                // Action Buttons based on status
                 _buildActions(job),
               ],
             ),
@@ -215,18 +213,14 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final currentUid = ref.watch(authRepositoryProvider).currentUser?.id;
-    if (currentUid == null) return const SizedBox();
+    final currentUser = ref.watch(userDocProvider).valueOrNull;
+    if (currentUser == null) return const SizedBox();
 
-    final isHauler = currentUid == job.haulerUid;
-    final isHost = currentUid == job.hostUid;
+    final isHost = currentUser.uid == job.hostUid;
+    final isAssignedHauler = currentUser.uid == job.haulerUid;
+    final isHaulerRole = currentUser.role == UserRole.hauler; // Potential hauler
 
-// ... inside _buildActions ...
-
-    // Host View
     if (isHost) {
-       // ... existing cancel logic ...
-       
        if (job.status != JobStatus.completed && job.status != JobStatus.cancelled && job.haulerUid != null) {
           return Column(
             children: [
@@ -239,7 +233,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-              if (job.status == JobStatus.pending)
+              if (job.status == JobStatus.open || job.status == JobStatus.pending)
                 OutlinedButton.icon(
                   onPressed: () => _cancelJob(job),
                   icon: const Icon(Icons.cancel),
@@ -249,26 +243,13 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
             ],
           );
        }
-       // ... existing complete logic ...
        return const SizedBox();
     }
 
-    // Hauler View
-    if (isHauler) {
-       // Add contact button at the top of actions or bottom?
-       // Let's return a Column with contact button at bottom
-       
+    if (isAssignedHauler) {
        Widget actionButton = const SizedBox();
        switch (job.status) {
-        case JobStatus.pending:
-          actionButton = ElevatedButton.icon(
-            onPressed: () => _acceptJob(job),
-            icon: const Icon(Icons.check_circle),
-            label: const Text('Accept This Job'),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
-          );
-          break;
-        case JobStatus.accepted:
+        case JobStatus.assigned:
           actionButton = ElevatedButton.icon(
             onPressed: () => _advanceStatus(job, JobStatus.enRoute),
             icon: const Icon(Icons.navigation),
@@ -317,7 +298,6 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
           );
           break;
         case JobStatus.completed:
-           // ... existing complete logic ...
            return Column(
               children: [
                 const Icon(Icons.check_circle, color: Colors.green, size: 48),
@@ -337,15 +317,10 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                     style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
                   ),
                 ),
-                const SizedBox(height: 10),
-                OutlinedButton(
-                  onPressed: () => context.pop(),
-                  child: const Text('Back to Jobs'),
-                ),
               ],
            );
-        case JobStatus.cancelled:
-           return const Center(child: Text('Cancelled', style: TextStyle(color: Colors.red)));
+        default:
+          break;
        }
 
        return Column(
@@ -365,18 +340,27 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
          ],
        );
     }
+
+    // New: If Open Job and User is Hauler (and not already assigned)
+    if (isHaulerRole && (job.status == JobStatus.open || job.status == JobStatus.pending) && job.haulerUid == null) {
+      return SizedBox(
+        width: double.infinity,
+         child: ElevatedButton.icon(
+            onPressed: () => _acceptJob(job),
+            icon: const Icon(Icons.check_circle),
+            label: const Text('Accept This Job'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
+          ),
+      );
+    }
     
-    // Viewer / Other (Not owner or hauler)
     return const SizedBox();
   }
 }
 
-// Stream provider for watching a single job
 final _jobStreamProvider = StreamProvider.autoDispose.family<Job?, String>((ref, jobId) {
   return ref.watch(jobRepositoryProvider).watchJob(jobId);
 });
-
-// ─── Helper Widgets ──────────────────────────────────
 
 class _StatusBanner extends StatelessWidget {
   final JobStatus status;
@@ -384,8 +368,9 @@ class _StatusBanner extends StatelessWidget {
 
   Color get _color {
     switch (status) {
+      case JobStatus.open:      return Colors.green;
       case JobStatus.pending:   return Colors.grey;
-      case JobStatus.accepted:  return Colors.blue;
+      case JobStatus.assigned:  return Colors.blue;
       case JobStatus.enRoute:   return Colors.indigo;
       case JobStatus.atPickup:  return Colors.orange;
       case JobStatus.loaded:    return Colors.amber;
@@ -398,8 +383,9 @@ class _StatusBanner extends StatelessWidget {
 
   String get _label {
     switch (status) {
-      case JobStatus.pending:   return 'Waiting for Hauler';
-      case JobStatus.accepted:  return 'Hauler Assigned';
+      case JobStatus.open:      return 'Open for Hauler';
+      case JobStatus.pending:   return 'Pending';
+      case JobStatus.assigned:  return 'Hauler Assigned';
       case JobStatus.enRoute:   return 'En Route to Pickup';
       case JobStatus.atPickup:  return 'At Pickup Site';
       case JobStatus.loaded:    return 'Material Loaded';

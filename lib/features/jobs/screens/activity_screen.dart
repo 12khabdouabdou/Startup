@@ -206,8 +206,9 @@ class _JobTile extends StatelessWidget {
 
   Color get _statusColor {
     switch (job.status) {
+      case JobStatus.open:      return Colors.green;
       case JobStatus.pending:   return Colors.grey;
-      case JobStatus.accepted:  return Colors.blue;
+      case JobStatus.assigned:  return Colors.blue;
       case JobStatus.enRoute:
       case JobStatus.atPickup:  return Colors.orange;
       case JobStatus.loaded:
@@ -220,8 +221,9 @@ class _JobTile extends StatelessWidget {
 
   String get _statusLabel {
     switch (job.status) {
+      case JobStatus.open:      return 'Open';
       case JobStatus.pending:   return 'Pending';
-      case JobStatus.accepted:  return 'Accepted';
+      case JobStatus.assigned:  return 'Assigned';
       case JobStatus.enRoute:   return 'En Route';
       case JobStatus.atPickup:  return 'At Pickup';
       case JobStatus.loaded:    return 'Loaded';

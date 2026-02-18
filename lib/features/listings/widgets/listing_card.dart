@@ -16,10 +16,13 @@ class ListingCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final ownerAsync = ref.watch(userProfileProvider(listing.ownerId));
+    final ownerAsync = ref.watch(userProfileProvider(listing.hostUid));
     final owner = ownerAsync.value;
     final isVerified = owner?.isVerified ?? false;
     final ownerName = owner?.fullName ?? 'User';
+
+    // Derived Title
+    final displayTitle = '${listing.material.name.toUpperCase()} (${listing.type.name})';
 
     return Card(
       elevation: 2,
@@ -33,9 +36,9 @@ class ListingCard extends ConsumerWidget {
             // Image Section
             AspectRatio(
               aspectRatio: 16 / 9,
-              child: listing.images.isNotEmpty
+              child: listing.photos.isNotEmpty
                   ? Image.network(
-                      listing.images.first,
+                      listing.photos.first,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
                         color: Colors.grey[200],
@@ -60,7 +63,7 @@ class ListingCard extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          listing.title,
+                          displayTitle,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -69,9 +72,9 @@ class ListingCard extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (listing.price != null && listing.price! > 0)
+                      if (listing.price > 0)
                         Text(
-                          '\$${listing.price!.toStringAsFixed(0)}',
+                          '\$${listing.price.toStringAsFixed(0)}',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -94,7 +97,7 @@ class ListingCard extends ConsumerWidget {
                   
                   // Material & Quantity
                   Text(
-                    '${listing.material} • ${listing.quantity} m³',
+                    '${listing.material.name} • ${listing.quantity} m³',
                     style: TextStyle(color: Colors.grey[600], fontSize: 13),
                   ),
                   
@@ -126,7 +129,7 @@ class ListingCard extends ConsumerWidget {
                       CircleAvatar(
                         radius: 10,
                         backgroundColor: Colors.grey[300],
-                        child: Text(ownerName[0].toUpperCase(), style: const TextStyle(fontSize: 10)),
+                        child: Text(ownerName.isNotEmpty ? ownerName[0].toUpperCase() : 'U', style: const TextStyle(fontSize: 10)),
                       ),
                       const SizedBox(width: 6),
                       Text(
