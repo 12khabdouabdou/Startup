@@ -60,11 +60,7 @@ class _HaulerActivityView extends ConsumerWidget {
                    Icon(Icons.local_shipping_outlined, size: 64, color: Colors.grey[400]),
                    const SizedBox(height: 16),
                    const Text('No active jobs.', style: TextStyle(color: Colors.grey)),
-                   const SizedBox(height: 12),
-                   ElevatedButton(
-                     onPressed: () => context.push('/jobs/board'),
-                     child: const Text('Find Loads'),
-                   ),
+                   // Button is now FAB
                  ],
                ),
              );
@@ -79,6 +75,11 @@ class _HaulerActivityView extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/jobs/board'),
+        icon: const Icon(Icons.search),
+        label: const Text('Find Loads'),
       ),
     );
   }

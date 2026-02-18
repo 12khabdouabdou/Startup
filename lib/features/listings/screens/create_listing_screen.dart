@@ -314,6 +314,13 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
           type: StepperType.vertical,
           currentStep: _currentStep.index,
           onStepContinue: () {
+             if (_currentStep == _Step.location && _currentLocation == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please mark a location on the map or use current location')),
+                );
+                return;
+             }
+
              if (_currentStep == _Step.photos) {
                 _submit();
              } else {
