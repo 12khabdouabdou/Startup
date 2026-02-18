@@ -73,17 +73,28 @@ class Job {
             );
          }
       }
-      // Handle String (WKT) - POINT(lng lat)
-      if (loc is String && loc.startsWith('POINT')) {
+      // Handle String (WKT) - POINT(lng lat) or POINT (lng lat)
+      if (loc is String && loc.trim().toUpperCase().startsWith('POINT')) {
          try {
-           final content = loc.replaceAll('POINT(', '').replaceAll(')', '');
-           final parts = content.split(' ');
+           final content = loc
+               .trim()
+               .toUpperCase()
+               .replaceAll('POINT', '')
+               .replaceAll('(', '')
+               .replaceAll(')', '')
+               .trim();
+           
+           // Split by any whitespace (multiple spaces, tabs, etc)
+           final parts = content.split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
+           
            if (parts.length >= 2) {
              final lng = double.parse(parts[0]);
              final lat = double.parse(parts[1]);
              return GeoPoint(lat, lng);
            }
-         } catch (_) {}
+         } catch (e) {
+           // debugPrint('Error parsing WKT: $e');
+         }
       }
       return null;
     }

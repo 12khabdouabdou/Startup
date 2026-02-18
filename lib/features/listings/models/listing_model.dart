@@ -62,20 +62,25 @@ class Listing {
              loc = GeoPoint(rawLoc['latitude'], rawLoc['longitude']);
          }
       } 
-      // Handle string WKT (Well Known Text) - POINT(lng lat)
-      else if (rawLoc is String) {
-        if (rawLoc.startsWith('POINT')) {
-           try {
-             // Remove POINT( and )
-             final content = rawLoc.replaceAll('POINT(', '').replaceAll(')', '');
-             final parts = content.split(' ');
-             if (parts.length >= 2) {
-               final lng = double.parse(parts[0]);
-               final lat = double.parse(parts[1]);
-               loc = GeoPoint(lat, lng);
-             }
-           } catch (_) {}
-        }
+      // Handle string WKT (Well Known Text) - POINT(lng lat) or POINT (lng lat)
+      else if (rawLoc is String && rawLoc.trim().toUpperCase().startsWith('POINT')) {
+         try {
+           final content = rawLoc
+               .trim()
+               .toUpperCase()
+               .replaceAll('POINT', '')
+               .replaceAll('(', '')
+               .replaceAll(')', '')
+               .trim();
+           
+           final parts = content.split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
+           
+           if (parts.length >= 2) {
+             final lng = double.parse(parts[0]);
+             final lat = double.parse(parts[1]);
+             loc = GeoPoint(lat, lng);
+           }
+         } catch (_) {}
       }
     }
 
