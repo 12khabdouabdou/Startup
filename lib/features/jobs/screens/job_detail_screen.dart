@@ -10,6 +10,7 @@ import '../../../core/services/storage_service.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../../messaging/repositories/chat_repository.dart';
 import '../../../core/models/app_user.dart';
+import '../../maps/widgets/job_route_map.dart';
 
 class JobDetailScreen extends ConsumerStatefulWidget {
   final String jobId;
@@ -147,6 +148,11 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
               children: [
                 _StatusBanner(status: job.status),
                 const SizedBox(height: 24),
+
+                if (job.pickupLocation != null && job.dropoffLocation != null) ...[
+                   JobRouteMap(pickup: job.pickupLocation!, dropoff: job.dropoffLocation!),
+                   const SizedBox(height: 24),
+                ],
 
                 _InfoSection(title: 'Material', value: '${job.material ?? "N/A"} — ${job.quantity?.toStringAsFixed(0) ?? "?"} units'),
                 const SizedBox(height: 12),

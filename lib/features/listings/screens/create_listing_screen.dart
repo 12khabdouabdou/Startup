@@ -9,6 +9,8 @@ import 'package:geolocator/geolocator.dart';
 import '../../../core/models/geo_point.dart';
 import '../models/listing_model.dart';
 import '../repositories/listing_repository.dart';
+import '../../maps/screens/location_picker_screen.dart';
+import '../../maps/widgets/static_map_preview.dart';
 
 class CreateListingScreen extends ConsumerStatefulWidget {
   const CreateListingScreen({super.key});
@@ -214,13 +216,34 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   Widget _buildLocation() {
     return Column(
       children: [
+        if (_currentLocation != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: StaticMapPreview(center: _currentLocation!),
+          ),
         TextFormField(
           controller: _addressController,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Address / Location Description',
-            border: OutlineInputBorder(),
-            prefixIcon: Icon(Icons.location_on),
+            border: const OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.location_on),
             hintText: 'e.g., 123 Main St, Springfield',
+            suffixIcon: IconButton(
+               icon: const Icon(Icons.map, color: Colors.blue),
+               tooltip: 'Pick on Map',
+               onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (c) => LocationPickerScreen(initialLocation: _currentLocation)),
+                  );
+                  if (result is LocationResult) {
+                     setState(() {
+                        _currentLocation = result.point;
+                        _addressController.text = result.address;
+                     });
+                  }
+               },
+            ),
           ),
           validator: (v) => v == null || v.isEmpty ? 'Required' : null,
           maxLines: 2,

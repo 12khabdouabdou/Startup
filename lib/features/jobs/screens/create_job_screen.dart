@@ -7,6 +7,7 @@ import '../../listings/repositories/listing_repository.dart';
 import '../../listings/models/listing_model.dart';
 import '../../auth/repositories/auth_repository.dart';
 import '../../../core/models/geo_point.dart';
+import '../../maps/screens/location_picker_screen.dart';
 
 class CreateJobScreen extends ConsumerStatefulWidget {
   final String listingId;
@@ -34,6 +35,7 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
   final _priceController = TextEditingController();
   final _qtyController = TextEditingController();
   final _materialController = TextEditingController();
+  GeoPoint? _dropoffLocation;
 
   bool _isSubmitting = false;
   bool _isLoadingListing = true;
@@ -102,8 +104,9 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
         quantity: double.tryParse(_qtyController.text.trim()) ?? widget.initialQuantity ?? 0.0,
         notes: _notesController.text.trim(),
         createdAt: DateTime.now(),
+        createdAt: DateTime.now(),
         pickupLocation: _listing?.location ?? const GeoPoint(0, 0),
-        dropoffLocation: const GeoPoint(0, 0), // Placeholder until Map implemented
+        dropoffLocation: _dropoffLocation ?? const GeoPoint(0, 0),
       );
 
       await ref.read(jobRepositoryProvider).createJob(job); 
@@ -172,11 +175,26 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
                   
                   TextFormField(
                     controller: _dropoffController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Dropoff Address',
-                      prefixIcon: Icon(Icons.flag),
-                      border: OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.flag),
+                      border: const OutlineInputBorder(),
                       helperText: 'Enter destination address',
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.map, color: Colors.blue),
+                        onPressed: () async {
+                           final result = await Navigator.push(
+                             context,
+                             MaterialPageRoute(builder: (c) => LocationPickerScreen(initialLocation: _dropoffLocation)),
+                           );
+                           if (result is LocationResult) {
+                              setState(() {
+                                 _dropoffLocation = result.point;
+                                 _dropoffController.text = result.address;
+                              });
+                           }
+                        },
+                      ),
                     ),
                     validator: (v) => v?.isEmpty == true ? 'Required' : null,
                   ),

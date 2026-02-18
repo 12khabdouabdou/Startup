@@ -10,6 +10,7 @@ import '../../jobs/models/job_model.dart';
 import '../../profile/providers/profile_provider.dart'; // for userDocProvider
 import '../../../core/models/app_user.dart';
 import '../../messaging/repositories/chat_repository.dart';
+import '../../maps/widgets/static_map_preview.dart';
 
 class ListingDetailScreen extends ConsumerWidget {
   final String listingId;
@@ -141,6 +142,12 @@ class ListingDetailScreen extends ConsumerWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
+                  ],
+                  
+                  // Map
+                  if (listing.location != null && (listing.location!.latitude != 0 || listing.location!.longitude != 0)) ...[
+                     StaticMapPreview(center: listing.location!, height: 180),
+                     const SizedBox(height: 24),
                   ],
 
                   // Description
