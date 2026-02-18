@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../models/chat_model.dart';
 import '../repositories/chat_repository.dart';
 import '../../auth/repositories/auth_repository.dart';
+import '../../profile/providers/profile_provider.dart';
+import '../../../core/models/app_user.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String chatId;
@@ -63,9 +65,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget build(BuildContext context) {
     final messagesAsync = ref.watch(_messagesProvider(widget.chatId));
     final currentUid = ref.watch(authRepositoryProvider).currentUser?.id ?? '';
+    
+    // Resolve Peer Name Logic
+    final chatAsync = ref.watch(_chatProvider(widget.chatId));
+    final chat = chatAsync.value;
+    final otherUid = chat?.participantIds.firstWhere((id) => id != currentUid, orElse: () => '') ?? '';
+    
+    final otherProfileAsync = otherUid.isNotEmpty ? ref.watch(userProfileProvider(otherUid)) : const AsyncValue<AppUser?>.loading();
+    final otherName = otherProfileAsync.value?.fullName ?? 'User';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Conversation')),
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(otherName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            if (otherProfileAsync.isLoading) 
+              const Text('Loading...', style: TextStyle(fontSize: 12))
+            else if (chatAsync.hasError)
+              const Text('Connection error', style: TextStyle(fontSize: 12)),
+          ],
+        ),
+      ),
       body: Column(
         children: [
           // Messages
@@ -120,8 +141,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
+                      style: const TextStyle(color: Colors.black87), // Fix visibility
                       decoration: InputDecoration(
                         hintText: 'Type a message...',
+                        hintStyle: TextStyle(color: Colors.grey[500]),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                           borderSide: BorderSide.none,
@@ -153,6 +176,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 }
+
+// Helper Providers
+final _chatProvider = StreamProvider.autoDispose.family<Chat?, String>((ref, chatId) {
+  return ref.watch(chatRepositoryProvider).watchChat(chatId);
+});
 
 // Stream provider for messages
 final _messagesProvider = StreamProvider.autoDispose.family<List<ChatMessage>, String>((ref, chatId) {

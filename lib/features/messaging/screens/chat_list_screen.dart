@@ -4,6 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../repositories/chat_repository.dart';
 import '../../auth/repositories/auth_repository.dart';
+import '../../profile/providers/profile_provider.dart';
+import '../models/chat_model.dart';
+// Note: Chat model import was missing in previous file view? No, it wasn't.
+// Wait, Step 1655 didn't show chat_model import. But 'chat.participantIds' suggests it knows Chat type?
+// Ah, 'final chatsAsync = ref.watch(userChatsProvider);' implies type inference.
+// But I should import it explicit if I use it in Tile.
 
 class ChatListScreen extends ConsumerWidget {
   const ChatListScreen({super.key});
@@ -11,7 +17,6 @@ class ChatListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final chatsAsync = ref.watch(userChatsProvider);
-    final currentUid = ref.watch(authRepositoryProvider).currentUser?.id ?? '';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Messages')),
@@ -36,33 +41,7 @@ class ChatListScreen extends ConsumerWidget {
             itemCount: chats.length,
             separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
             itemBuilder: (context, index) {
-              final chat = chats[index];
-              final otherUid = chat.participantIds
-                  .firstWhere((uid) => uid != currentUid, orElse: () => 'Unknown');
-              final timeLabel = chat.lastMessageAt != null
-                  ? DateFormat.MMMd().add_jm().format(chat.lastMessageAt!)
-                  : '';
-
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.green.withValues(alpha: 0.15),
-                  child: Text(
-                    otherUid.isNotEmpty ? otherUid[0].toUpperCase() : '?',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
-                  ),
-                ),
-                title: Text(
-                  'User ${otherUid.substring(0, 6)}',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                subtitle: Text(
-                  chat.lastMessage ?? 'No messages yet',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: Text(timeLabel, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-                onTap: () => context.push('/chat/${chat.id}'),
-              );
+              return _ChatListTile(chat: chats[index]);
             },
           );
         },
@@ -71,4 +50,52 @@ class ChatListScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _ChatListTile extends ConsumerWidget {
+  final Chat chat;
+  const _ChatListTile({required this.chat});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUid = ref.watch(authRepositoryProvider).currentUser?.id ?? '';
+    final otherUid = chat.participantIds.firstWhere(
+      (uid) => uid != currentUid,
+      orElse: () => '',
+    );
+
+    final otherProfileAsync = otherUid.isNotEmpty
+        ? ref.watch(userProfileProvider(otherUid))
+        : const AsyncValue.data(null);
+    
+    final displayName = otherProfileAsync.value?.fullName ?? 'User ${otherUid.isEmpty ? 'Unknown' : otherUid.substring(0, min(6, otherUid.length))}';
+    final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
+
+    final timeLabel = chat.lastMessageAt != null
+        ? DateFormat.MMMd().add_jm().format(chat.lastMessageAt!)
+        : '';
+
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: Colors.green.withValues(alpha: 0.15),
+        child: Text(
+          initial,
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+        ),
+      ),
+      title: Text(
+        displayName,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        chat.lastMessage ?? 'No messages yet',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: Text(timeLabel, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+      onTap: () => context.push('/chat/${chat.id}'),
+    );
+  }
+  
+  int min(int a, int b) => a < b ? a : b;
 }

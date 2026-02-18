@@ -18,6 +18,7 @@ class AppUser {
   // Getters for compatibility
   String get id => uid;
   String? get phone => phoneNumber;
+  String get fullName => displayName ?? companyName ?? 'User';
 
   const AppUser({
     required this.uid,

@@ -58,6 +58,18 @@ class ChatRepository {
         .map((data) => data.map((json) => Chat.fromMap(json, json['id'] as String)).toList());
   }
 
+  /// Stream single chat by ID
+  Stream<Chat?> watchChat(String chatId) {
+    return _client
+        .from('chats')
+        .stream(primaryKey: ['id'])
+        .eq('id', chatId)
+        .map((data) {
+          if (data.isEmpty) return null;
+          return Chat.fromMap(data.first, data.first['id'] as String);
+        });
+  }
+
   /// Stream messages for a chat
   Stream<List<ChatMessage>> watchMessages(String chatId) {
     return _client

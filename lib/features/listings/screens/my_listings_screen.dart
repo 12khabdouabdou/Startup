@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../repositories/listing_repository.dart';
-import '../widgets/listing_item.dart';
+import '../widgets/listing_card.dart';
 
 class MyListingsScreen extends ConsumerWidget {
   const MyListingsScreen({super.key});
@@ -34,9 +34,35 @@ class MyListingsScreen extends ConsumerWidget {
             itemCount: listings.length,
             itemBuilder: (context, index) {
                final listing = listings[index];
-               return ListingItem(
-                  listing: listing,
-                  onTap: () => context.push('/listings/${listing.id}', extra: listing),
+               return Dismissible(
+                 key: Key(listing.id),
+                 direction: DismissDirection.endToStart,
+                 background: Container(
+                   color: Colors.red,
+                   alignment: Alignment.centerRight,
+                   padding: const EdgeInsets.only(right: 20),
+                   child: const Icon(Icons.delete, color: Colors.white),
+                 ),
+                 confirmDismiss: (direction) async {
+                   return await showDialog(
+                     context: context,
+                     builder: (ctx) => AlertDialog(
+                       title: const Text('Archive Listing?'),
+                       content: const Text('This will remove the listing from public view.'),
+                       actions: [
+                         TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+                         TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Archive', style: TextStyle(color: Colors.red))),
+                       ],
+                     ),
+                   );
+                 },
+                 onDismissed: (_) {
+                   ref.read(listingRepositoryProvider).archiveListing(listing.id);
+                 },
+                 child: ListingCard(
+                    listing: listing,
+                    onTap: () => context.push('/listings/${listing.id}', extra: listing),
+                 ),
                );
             },
           );

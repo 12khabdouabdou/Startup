@@ -15,3 +15,7 @@ final userDocProvider = StreamProvider.autoDispose<AppUser?>((ref) {
     error: (_, __) => const Stream.empty(),
   );
 });
+
+final userProfileProvider = StreamProvider.autoDispose.family<AppUser?, String>((ref, uid) {
+  return ref.watch(profileRepositoryProvider).getUser(uid);
+});
