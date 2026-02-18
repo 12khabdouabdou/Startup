@@ -27,6 +27,59 @@ final myHostJobsProvider = StreamProvider.autoDispose<List<Job>>((ref) {
   return ref.watch(jobRepositoryProvider).fetchHostJobs(user.id);
 });
 
+class ActivityScreen extends ConsumerWidget {
+  const ActivityScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(userDocProvider).valueOrNull;
+    if (user?.role == UserRole.hauler) {
+       return _HaulerActivityView();
+    }
+    return _HostActivityView();
+  }
+}
+
+class _HaulerActivityView extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final jobsAsync = ref.watch(myJobsProvider);
+    return Scaffold(
+      appBar: AppBar(title: const Text('My Jobs')),
+      body: jobsAsync.when(
+        data: (jobs) {
+          if (jobs.isEmpty) {
+             return Center(
+               child: Column(
+                 mainAxisAlignment: MainAxisAlignment.center,
+                 children: [
+                   Icon(Icons.local_shipping_outlined, size: 64, color: Colors.grey[400]),
+                   const SizedBox(height: 16),
+                   const Text('No active jobs.', style: TextStyle(color: Colors.grey)),
+                   const SizedBox(height: 12),
+                   ElevatedButton(
+                     onPressed: () => context.push('/jobs/board'),
+                     child: const Text('Find Loads'),
+                   ),
+                 ],
+               ),
+             );
+          }
+          return ListView.builder(
+             itemCount: jobs.length,
+             itemBuilder: (context, index) {
+               final job = jobs[index];
+               return _JobTile(job: job, onTap: () => context.push('/jobs/${job.id}', extra: job));
+             },
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Error: $e')),
+      ),
+    );
+  }
+}
+
 class _HostActivityView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {

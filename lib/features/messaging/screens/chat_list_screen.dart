@@ -37,7 +37,7 @@ class ChatListScreen extends ConsumerWidget {
             separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
             itemBuilder: (context, index) {
               final chat = chats[index];
-              final otherUid = chat.participantUids
+              final otherUid = chat.participantIds
                   .firstWhere((uid) => uid != currentUid, orElse: () => 'Unknown');
               final timeLabel = chat.lastMessageAt != null
                   ? DateFormat.MMMd().add_jm().format(chat.lastMessageAt!)
