@@ -36,6 +36,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
         user.id,
         profile?.displayName ?? 'Hauler',
       );
+      ref.invalidate(_jobStreamProvider(widget.jobId));
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Accepted!')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -63,6 +64,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     try {
       await ref.read(jobRepositoryProvider).cancelJob(job.id);
       await ref.read(listingRepositoryProvider).updateListing(job.listingId, {'status': 'active'});
+      ref.invalidate(_jobStreamProvider(widget.jobId));
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Cancelled')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -75,6 +77,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     setState(() => _isLoading = true);
     try {
       await ref.read(jobRepositoryProvider).updateJobStatus(job.id, nextStatus);
+      ref.invalidate(_jobStreamProvider(widget.jobId));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
@@ -103,6 +106,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
       } else {
         await repo.uploadDropoffPhoto(job.id, url);
       }
+      ref.invalidate(_jobStreamProvider(widget.jobId));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
