@@ -30,6 +30,8 @@ class Job {
   final double? quantity;
   final String? material;
   final double? priceOffer;    // New: Price offered for the haul
+  final String? payerId;       // New: Who pays for the haul
+  final double? platformRevenue; // New: Platform cut
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -50,6 +52,8 @@ class Job {
     this.quantity,
     this.material,
     this.priceOffer,
+    this.payerId,
+    this.platformRevenue,
     required this.createdAt,
     this.updatedAt,
   });
@@ -128,6 +132,8 @@ class Job {
       quantity: (data['quantity'] as num?)?.toDouble(),
       material: data['material'] as String?,
       priceOffer: (data['price_offer'] as num?)?.toDouble(),
+      payerId: data['payer_id'] as String?,
+      platformRevenue: (data['platform_revenue'] as num?)?.toDouble(),
       createdAt: (data['created_at'] is String)
           ? DateTime.parse(data['created_at'] as String)
           : (data['createdAt'] is String)
@@ -163,6 +169,8 @@ class Job {
       'quantity': quantity,
       'material': material,
       'price_offer': priceOffer,
+      'payer_id': payerId,
+      'platform_revenue': platformRevenue,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -185,6 +193,8 @@ class Job {
     double? quantity,
     String? material,
     double? priceOffer,
+    String? payerId,
+    double? platformRevenue,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -205,6 +215,8 @@ class Job {
       quantity: quantity ?? this.quantity,
       material: material ?? this.material,
       priceOffer: priceOffer ?? this.priceOffer,
+      payerId: payerId ?? this.payerId,
+      platformRevenue: platformRevenue ?? this.platformRevenue,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

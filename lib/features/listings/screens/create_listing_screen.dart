@@ -151,17 +151,8 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   Widget _buildBasicInfo() {
     return Column(
       children: [
-        ToggleButtons(
-          isSelected: [_type == ListingType.offering, _type == ListingType.needing],
-          onPressed: (index) {
-            setState(() => _type = index == 0 ? ListingType.offering : ListingType.needing);
-          },
-          children: const [
-            Padding(padding: EdgeInsets.symmetric(horizontal: 24), child: Text('I Have Material')),
-            Padding(padding: EdgeInsets.symmetric(horizontal: 24), child: Text('I Need Material')),
-          ],
-        ),
-        const SizedBox(height: 24),
+        // ToggleButtons removed - Defaulting to Offering
+        // const SizedBox(height: 24),
         DropdownButtonFormField<FillMaterial>(
           value: _material,
           decoration: const InputDecoration(labelText: 'Material Type', border: OutlineInputBorder()),

@@ -17,33 +17,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  ListingType? _typeFilter;
-  FillMaterial? _materialFilter;
-  String _searchQuery = '';
-  final _searchController = TextEditingController();
-  bool _showSearch = false;
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  List<Listing> _applyFilters(List<Listing> listings) {
-    return listings.where((l) {
-      if (_typeFilter != null && l.type != _typeFilter) return false;
-      if (_materialFilter != null && l.material != _materialFilter) return false;
-      if (_searchQuery.isNotEmpty) {
-        final q = _searchQuery.toLowerCase();
-        final matchesMaterial = l.material.name.toLowerCase().contains(q);
-        final matchesDescription = l.description.toLowerCase().contains(q);
-        final matchesAddress = (l.address ?? '').toLowerCase().contains(q);
-        if (!matchesMaterial && !matchesDescription && !matchesAddress) return false;
-      }
-      return true;
-    }).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     final listingsAsync = ref.watch(activeListingsProvider);
@@ -98,7 +71,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _buildFilterChips(),
 
           // Active filter summary
-          if (_typeFilter != null || _materialFilter != null || _searchQuery.isNotEmpty)
+          if (_materialFilter != null || _searchQuery.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Row(
@@ -113,7 +86,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   TextButton(
                     onPressed: () => setState(() {
-                      _typeFilter = null;
                       _materialFilter = null;
                       _searchQuery = '';
                       _searchController.clear();
@@ -169,6 +141,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     padding: const EdgeInsets.only(top: 8, bottom: 80),
                     itemCount: filtered.length,
                     itemBuilder: (context, index) {
+                       // Filter out Needing listings if any exist in DB (just in case)
+                       if (filtered[index].type == ListingType.needing) return const SizedBox.shrink();
+                       
                       return ListingCard(
                         listing: filtered[index],
                         onTap: () {
@@ -199,9 +174,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  List<Listing> _applyFilters(List<Listing> listings) {
+    return listings.where((l) {
+      // Hard filter: Only show Offering (Seller) listings
+      if (l.type == ListingType.needing) return false;
+      
+      if (_materialFilter != null && l.material != _materialFilter) return false;
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        final matchesMaterial = l.material.name.toLowerCase().contains(q);
+        final matchesDescription = l.description.toLowerCase().contains(q);
+        final matchesAddress = (l.address ?? '').toLowerCase().contains(q);
+        if (!matchesMaterial && !matchesDescription && !matchesAddress) return false;
+      }
+      return true;
+    }).toList();
+  }
+
   String _buildFilterSummary() {
     final parts = <String>[];
-    if (_typeFilter != null) parts.add(_typeFilter == ListingType.offering ? 'Offering' : 'Needing');
     if (_materialFilter != null) parts.add(_materialFilter!.name[0].toUpperCase() + _materialFilter!.name.substring(1));
     if (_searchQuery.isNotEmpty) parts.add('"$_searchQuery"');
     return 'Filtered by: ${parts.join(', ')}';
@@ -213,26 +204,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          // Type Filters
-          FilterChip(
-            label: const Text('Offering'),
-            selected: _typeFilter == ListingType.offering,
-            onSelected: (selected) {
-              setState(() => _typeFilter = selected ? ListingType.offering : null);
-            },
-            selectedColor: Colors.green.withValues(alpha: 0.2),
-          ),
-          const SizedBox(width: 8),
-          FilterChip(
-            label: const Text('Needing'),
-            selected: _typeFilter == ListingType.needing,
-            onSelected: (selected) {
-              setState(() => _typeFilter = selected ? ListingType.needing : null);
-            },
-            selectedColor: Colors.orange.withValues(alpha: 0.2),
-          ),
-          const SizedBox(width: 16),
-
+          // Removed ListingType Chips
+          
           // Material Filters
           ...FillMaterial.values.map((m) {
             final label = m.name[0].toUpperCase() + m.name.substring(1);
@@ -262,16 +235,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Filters', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            const Text('Type'),
-            Wrap(
-              spacing: 8,
-              children: [
-                ChoiceChip(label: const Text('All'), selected: _typeFilter == null, onSelected: (_) => setState(() { _typeFilter = null; Navigator.pop(context); })),
-                ChoiceChip(label: const Text('Offering'), selected: _typeFilter == ListingType.offering, onSelected: (_) => setState(() { _typeFilter = ListingType.offering; Navigator.pop(context); })),
-                ChoiceChip(label: const Text('Needing'), selected: _typeFilter == ListingType.needing, onSelected: (_) => setState(() { _typeFilter = ListingType.needing; Navigator.pop(context); })),
-              ],
-            ),
+            // Removed Type Filter Section
             const SizedBox(height: 16),
             const Text('Material'),
             Wrap(
@@ -289,7 +253,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               width: double.infinity,
               child: TextButton(
                 onPressed: () {
-                  setState(() { _typeFilter = null; _materialFilter = null; });
+                  setState(() { _materialFilter = null; });
                   Navigator.pop(context);
                 },
                 child: const Text('Clear All Filters'),

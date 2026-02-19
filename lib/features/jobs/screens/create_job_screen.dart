@@ -121,6 +121,7 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
         createdAt: DateTime.now(),
         pickupLocation: _pickupLocation!,
         dropoffLocation: _dropoffLocation!,
+        payerId: user.id, // Explicitly set payer as the requester (job creator)
       );
 
       await ref.read(jobRepositoryProvider).createJob(job); 
