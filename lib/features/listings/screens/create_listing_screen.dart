@@ -11,6 +11,8 @@ import '../models/listing_model.dart';
 import '../repositories/listing_repository.dart';
 import '../../maps/screens/location_picker_screen.dart';
 import '../../maps/widgets/static_map_preview.dart';
+import '../../profile/providers/profile_provider.dart';
+import '../../../core/models/app_user.dart';
 
 class CreateListingScreen extends ConsumerStatefulWidget {
   const CreateListingScreen({super.key});
@@ -108,6 +110,12 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       final user = ref.read(authRepositoryProvider).currentUser;
       if (user == null) throw Exception('No user logged in');
 
+      // Security Check: Status must be approved
+      final userDoc = await ref.read(userDocProvider.future);
+      if (userDoc?.status != UserStatus.approved) {
+        throw Exception('Account not approved. Pending review.');
+      }
+
       // Upload Photos
       final storage = ref.read(storageServiceProvider);
       List<String> photoUrls = [];
@@ -183,7 +191,12 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
                 controller: _qtyController,
                 decoration: const InputDecoration(labelText: 'Quantity', border: OutlineInputBorder()),
                 keyboardType: TextInputType.number,
-                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Required';
+                  final n = double.tryParse(v);
+                  if (n == null || n <= 0) return 'Must be > 0';
+                  return null;
+                },
               ),
             ),
             const SizedBox(width: 16),
@@ -208,6 +221,13 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
             controller: _priceController,
             decoration: const InputDecoration(labelText: 'Price', prefixText: '\$', border: OutlineInputBorder()),
             keyboardType: TextInputType.number,
+            validator: (v) {
+              if (v != null && v.isNotEmpty) {
+                 final n = double.tryParse(v);
+                 if (n == null || n < 0) return 'Invalid price';
+              }
+              return null;
+            },
           ),
       ],
     );

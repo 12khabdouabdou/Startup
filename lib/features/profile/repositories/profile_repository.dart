@@ -69,6 +69,14 @@ class ProfileRepository {
       'route': '/profile',
     });
   }
+
+  /// Updates the license URL for verification purposes.
+  Future<void> updateLicenseUrl(String uid, String licenseUrl) async {
+    await _client.from('users').update({
+      'license_url': licenseUrl,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('uid', uid);
+  }
 }
 
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
