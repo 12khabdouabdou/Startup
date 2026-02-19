@@ -308,32 +308,91 @@ class _ActiveJobMapState extends ConsumerState<_ActiveJobMap> {
         
         // Navigation Overlay
         Positioned(
-          bottom: 20,
-          left: 20,
-          right: 20,
+          bottom: 24,
+          left: 16,
+          right: 16,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Card(
-                child: ListTile(
-                  leading: Icon(Icons.info, color: Colors.blue[800]),
-                  title: Text('Active Job: ${widget.job.material}'),
-                  subtitle: Text(widget.job.status.name.toUpperCase()),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.arrow_forward),
-                    onPressed: () => context.push('/jobs/${widget.job.id}'),
-                  ),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 8)),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton.icon(
-                onPressed: _launchExternalNav,
-                icon: const Icon(Icons.navigation),
-                label: const Text('Start Navigation'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
+                child: Column(
+                  children: [
+                    // Status Header
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF2E7D32),
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.flash_on, color: Colors.white, size: 16),
+                          const SizedBox(width: 8),
+                          Text(
+                            widget.job.status == JobStatus.accepted || widget.job.status == JobStatus.enRoute ? 'ON DISPATCH: PICKUP' : 'ON DISPATCH: DROP-OFF',
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1),
+                          ),
+                          const Spacer(),
+                          Text(
+                            'ID: ${widget.job.id.substring(0, 8).toUpperCase()}',
+                            style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Job Details
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      title: Text(
+                        '${widget.job.material} • ${widget.job.quantity?.toStringAsFixed(0)} Loads',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                      ),
+                      subtitle: Text(
+                         widget.job.status == JobStatus.accepted || widget.job.status == JobStatus.enRoute 
+                            ? widget.job.pickupAddress ?? 'Heading to pickup...'
+                            : widget.job.dropoffAddress ?? 'Heading to drop-off...',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                      trailing: Container(
+                         decoration: BoxDecoration(color: Colors.grey[100], shape: BoxShape.circle),
+                         child: IconButton(
+                           icon: const Icon(Icons.arrow_forward_rounded, color: Color(0xFF2E7D32)),
+                           onPressed: () => context.push('/jobs/${widget.job.id}'),
+                         ),
+                      ),
+                    ),
+                    // Action Footer
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _launchExternalNav,
+                              icon: const Icon(Icons.navigation_outlined, size: 20),
+                              label: const Text('OPEN MAPS', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2E7D32),
+                                foregroundColor: Colors.white,
+                                height: 50,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                elevation: 0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -461,6 +520,71 @@ class _ListingBrowserMap extends ConsumerWidget {
 
   const _ListingBrowserMap({required this.mapController, required this.currentLocation, required this.onRecenter});
 
+  void _showListingPreview(BuildContext context, Listing listing) {
+    showModalBottomSheet(
+      context: context,
+      barrierColor: Colors.black12,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (listing.photos.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(listing.photos.first, width: 80, height: 80, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(width: 80, height: 80, color: Colors.grey[200]),
+                    ),
+                  )
+                else
+                  Container(width: 80, height: 80, decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.terrain, color: Colors.grey)),
+                  
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(listing.material.name[0].toUpperCase() + listing.material.name.substring(1), 
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32))),
+                      Text('${listing.quantity.toStringAsFixed(0)} ${listing.unit.name}', style: const TextStyle(fontSize: 16)),
+                    ],
+                  ),
+                ),
+                Text(listing.price <= 0 ? 'FREE' : '\$${listing.price.toStringAsFixed(0)}', 
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF2E7D32))),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (listing.address != null)
+              Row(
+                children: [
+                  const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Expanded(child: Text(listing.address!, style: const TextStyle(color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                ],
+              ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  context.push('/listings/${listing.id}', extra: listing);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E7D32), foregroundColor: Colors.white),
+                child: const Text('View Full Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final listingsAsync = ref.watch(activeListingsProvider);
@@ -472,7 +596,7 @@ class _ListingBrowserMap extends ConsumerWidget {
         return FlutterMap(
           mapController: mapController,
           options: MapOptions(
-            initialCenter: currentLocation ?? const LatLng(0,0),
+            initialCenter: currentLocation ?? const LatLng(30.0444, 31.2357), // Default to Cairo or 0,0
             initialZoom: 10.0,
             interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
           ),
@@ -492,10 +616,10 @@ class _ListingBrowserMap extends ConsumerWidget {
                      width: 40,
                      height: 40,
                      child: GestureDetector(
-                       onTap: () => context.push('/listings/${listing.id}', extra: listing),
+                       onTap: () => _showListingPreview(context, listing),
                        child: Icon(
                          Icons.location_on,
-                         color: isOffer ? Colors.green : Colors.orange,
+                         color: isOffer ? const Color(0xFF2E7D32) : Colors.orange,
                          size: 40,
                        ),
                      ),

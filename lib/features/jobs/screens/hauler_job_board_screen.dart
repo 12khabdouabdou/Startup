@@ -14,7 +14,8 @@ class HaulerJobBoardScreen extends ConsumerWidget {
     final jobsAsync = ref.watch(availableJobsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Haul Requests')),
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(title: const Text('Available Gigs')),
       body: jobsAsync.when(
         data: (jobs) {
           if (jobs.isEmpty) {
@@ -22,9 +23,12 @@ class HaulerJobBoardScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.local_shipping_outlined, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text('No haul requests available.', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                  Icon(Icons.local_shipping_outlined, size: 80, color: Colors.grey[300]),
+                  const SizedBox(height: 24),
+                  const Text('No gigs nearby.', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text('We\'ll alert you when something pops up! 📢', 
+                    style: TextStyle(color: Colors.grey[600])),
                 ],
               ),
             );
@@ -32,11 +36,11 @@ class HaulerJobBoardScreen extends ConsumerWidget {
           return RefreshIndicator(
              onRefresh: () async => ref.invalidate(availableJobsProvider),
              child: ListView.separated(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
               itemCount: jobs.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, __) => const SizedBox(height: 16),
               itemBuilder: (context, index) {
-                return _JobRequestTile(job: jobs[index]);
+                return _GigCard(job: jobs[index]);
               },
             ),
           );
@@ -48,186 +52,163 @@ class HaulerJobBoardScreen extends ConsumerWidget {
   }
 }
 
-class _JobRequestTile extends ConsumerWidget {
+class _GigCard extends ConsumerWidget {
   final Job job;
-  const _JobRequestTile({required this.job});
+  const _GigCard({required this.job});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Determine host info
-    final hostAsync = ref.watch(userProfileProvider(job.hostUid));
-    final host = hostAsync.value;
-    final isVerified = host?.isVerified ?? false;
-    final hostName = host?.fullName ?? 'Unknown User';
+    final host = ref.watch(userProfileProvider(job.hostUid)).valueOrNull;
+    final isNew = DateTime.now().difference(job.createdAt).inHours < 1;
 
     return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () => _showJobDetails(context, ref, job, hostName, isVerified),
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header: Host Info + Price
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 14,
-                    backgroundColor: Colors.grey[200],
-                    backgroundImage: host?.companyName != null ? null : null, // Todo: Logo
-                    child: Text(hostName[0].toUpperCase(), style: const TextStyle(fontSize: 12)),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(hostName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  if (isVerified) const VerifiedBadge(size: 14),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.green[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.green[200]!),
+      elevation: 4,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2E7D32).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        job.material?.toUpperCase() ?? 'DIRT',
+                        style: const TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
                     ),
-                    child: Text(
-                      job.priceOffer != null ? '\$${job.priceOffer}' : 'Open Offer',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green[800]),
-                    ),
-                  ),
-                ],
-              ),
-              const Divider(height: 24),
-              // Route
-              Row(
-                children: [
-                  const Icon(Icons.circle, size: 12, color: Colors.blue),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(job.pickupAddress ?? 'Unknown Pickup', maxLines: 1, overflow: TextOverflow.ellipsis)),
-                ],
-              ),
-              Container(
-                margin: const EdgeInsets.only(left: 5),
-                height: 16,
-                decoration: BoxDecoration(
-                  border: Border(left: BorderSide(color: Colors.grey[300]!, width: 2)),
+                    if (isNew)
+                      const Row(
+                        children: [
+                          Icon(Icons.bolt, color: Colors.amber, size: 16),
+                          Text('URGENT', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12)),
+                        ],
+                      ),
+                  ],
                 ),
-              ),
-              Row(
-                children: [
-                  const Icon(Icons.location_on, size: 12, color: Colors.red),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(job.dropoffAddress ?? 'Unknown Dropoff', maxLines: 1, overflow: TextOverflow.ellipsis)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Material Info
-              Row(
-                children: [
-                  Icon(Icons.category, size: 16, color: Colors.grey[600]),
-                  const SizedBox(width: 4),
-                  Text(job.material ?? 'Dirt'),
-                  const SizedBox(width: 16),
-                  Icon(Icons.scale, size: 16, color: Colors.grey[600]),
-                  const SizedBox(width: 4),
-                  Text('${job.quantity?.toStringAsFixed(1) ?? "0"} m³'),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showJobDetails(BuildContext context, WidgetRef ref, Job job, String hostName, bool isVerified) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Accept Haul Job?'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Text('Posted by: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text(hostName),
-                  if (isVerified) const VerifiedBadge(size: 16),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _detailRow(Icons.upload, 'Pickup', job.pickupAddress),
-              _detailRow(Icons.download, 'Dropoff', job.dropoffAddress),
-              const Divider(),
-              _detailRow(Icons.category, 'Material', job.material),
-              _detailRow(Icons.scale, 'Quantity', '${job.quantity ?? 0} m³'),
-              _detailRow(Icons.attach_money, 'Offer', job.priceOffer != null ? '\$${job.priceOffer}' : 'Negotiable'),
-              const SizedBox(height: 8),
-              if (job.notes?.isNotEmpty == true) ...[
-                const Text('Notes:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(job.notes!),
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('PAYMENT', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                          Text(
+                            job.priceOffer != null ? '\$${job.priceOffer!.toStringAsFixed(0)}' : 'TBD',
+                            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF2E7D32)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Text('QUANTITY', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                        Text('${job.quantity?.toStringAsFixed(0) ?? "0"} Loads', 
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ],
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Divider(),
+                ),
+                _locationRow(Icons.upload, 'Pickup', job.pickupAddress ?? 'N/A', Colors.blue),
+                const SizedBox(height: 8),
+                _locationRow(Icons.download, 'Drop-off', job.dropoffAddress ?? 'N/A', Colors.red),
               ],
-            ],
+            ),
           ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              try {
-                // Use AppUser from profile provider
-                final user = ref.read(userDocProvider).valueOrNull; // Use AppUser
-                
-                if (user != null) {
-                  await ref.read(jobRepositoryProvider).acceptJob(
-                    job.id, 
-                    user.uid, 
-                    user.companyName ?? user.displayName ?? 'Hauler'
-                  );
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Accepted!')));
-                  }
-                } else {
-                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error: User profile not loaded')));
-                  }
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-                }
-              }
-            },
-            child: const Text('Accept Job'),
+          
+          // Large Action Button
+          SizedBox(
+            width: double.infinity,
+            height: 60,
+            child: ElevatedButton(
+              onPressed: () => _confirmAcceptance(context, ref),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2E7D32),
+                foregroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                ),
+                elevation: 0,
+              ),
+              child: const Text('Accept Gig ✓', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _detailRow(IconData icon, String label, String? value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: Colors.grey),
-          const SizedBox(width: 8),
-          Expanded(
-            child: RichText(
-              text: TextSpan(
-                style: const TextStyle(color: Colors.black87),
-                children: [
-                  TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  TextSpan(text: value ?? 'N/A'),
-                ],
-              ),
+  Widget _locationRow(IconData icon, String label, String value, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: const TextStyle(color: Colors.black87, fontSize: 13),
+              children: [
+                TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                TextSpan(text: value),
+              ],
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _confirmAcceptance(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Accept this gig?'),
+        content: const Text('Once accepted, this job will be assigned to you.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await ref.read(jobRepositoryProvider).acceptJob(job.id);
+                if (context.mounted) {
+                   ScaffoldMessenger.of(context).showSnackBar(
+                     const SnackBar(content: Text('✅ Gig accepted! Navigate to pickup?')),
+                   );
+                   // Navigate to active job view
+                   // context.push('/jobs/${job.id}');
+                }
+              } catch (e) {
+                if (context.mounted) {
+                   ScaffoldMessenger.of(context).showSnackBar(
+                     SnackBar(content: Text('❌ Gig already taken or error: $e')),
+                   );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E7D32), foregroundColor: Colors.white),
+            child: const Text('Accept'),
           ),
         ],
       ),

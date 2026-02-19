@@ -31,265 +31,254 @@ class ListingDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Attempt to get listing from widget or ModalRoute arguments
     final listing = this.listing ?? ModalRoute.of(context)?.settings.arguments as Listing?;
 
-    // If accessed via GoRouter extra:
-    // GoRouter passes extra differently. We'll use a simple approach:
-    // The listing can be passed via GoRouter's extra parameter.
-    // For now, show a placeholder if listing is null.
+    if (listing == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Details')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final materialName = listing.material.name[0].toUpperCase() + listing.material.name.substring(1);
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Listing Details'),
+        title: Text(materialName),
+        actions: [
+          IconButton(icon: const Icon(Icons.share), onPressed: () {}),
+        ],
       ),
-      body: listing == null
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.info_outline, size: 48, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Listing ID: $listingId',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Full detail view coming soon.\nFetch by ID will be implemented in next iteration.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                  ),
-                ],
-              ),
-            )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Photos
-                  if (listing.photos.isNotEmpty)
-                    SizedBox(
-                      height: 200,
-                      child: PageView.builder(
-                        itemCount: listing.photos.length,
-                        itemBuilder: (context, i) => ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(listing.photos[i], fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(color: Colors.grey[300], child: const Icon(Icons.broken_image, size: 48)),
-                          ),
-                        ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Photos Hero
+            Stack(
+              children: [
+                if (listing.photos.isNotEmpty)
+                  SizedBox(
+                    height: 300,
+                    child: PageView.builder(
+                      itemCount: listing.photos.length,
+                      itemBuilder: (context, i) => Image.network(
+                        listing.photos[i],
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: Colors.grey[200], child: const Icon(Icons.broken_image, size: 48)),
                       ),
                     ),
-                  const SizedBox(height: 24),
-
-                  // Type badge
+                  )
+                else
                   Container(
+                    height: 250,
+                    width: double.infinity,
+                    color: Colors.grey[100],
+                    child: const Icon(Icons.terrain, size: 64, color: Colors.grey),
+                  ),
+                Positioned(
+                  bottom: 16,
+                  left: 16,
+                  child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: (listing.type == ListingType.offering ? Colors.green : Colors.orange).withOpacity(0.15),
+                      color: const Color(0xFF2E7D32),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      listing.type == ListingType.offering ? 'OFFERING' : 'NEEDING',
-                      style: TextStyle(
-                        color: listing.type == ListingType.offering ? Colors.green : Colors.orange,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      '${listing.quantity.toStringAsFixed(0)} ${listing.unit.name.toUpperCase()}',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                ),
+              ],
+            ),
 
-                  // Material + Quantity
-                  Text(
-                    _materialLabel(listing.material),
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${listing.quantity.toStringAsFixed(0)} ${listing.unit.name}',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Price
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Icon(Icons.attach_money, color: Colors.grey[600]),
-                      const SizedBox(width: 4),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(materialName, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                          Text(listing.type == ListingType.offering ? 'Available for Pickup' : 'Material Requested', 
+                            style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+                        ],
+                      ),
                       Text(
-                        listing.price <= 0 ? 'FREE' : '\$${listing.price.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: listing.price <= 0 ? Colors.green : null,
-                        ),
+                        listing.price <= 0 ? 'FREE' : '\$${listing.price.toStringAsFixed(0)}',
+                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Color(0xFF2E7D32)),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-
-                  // Location
-                  if (listing.address != null && listing.address!.isNotEmpty) ...[
-                    Row(
-                      children: [
-                        Icon(Icons.location_on, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(listing.address!, style: const TextStyle(fontSize: 15)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                  ],
                   
-                  // Map
-                  if (listing.location != null && (listing.location!.latitude != 0 || listing.location!.longitude != 0)) ...[
-                     StaticMapPreview(center: listing.location!, height: 180),
-                     const SizedBox(height: 24),
-                  ],
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Divider(),
+                  ),
+
+                  // Location Card
+                  const Text('Location', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, color: Color(0xFF2E7D32)),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(listing.address ?? 'No address provided', style: const TextStyle(fontSize: 16))),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (listing.location != null)
+                     ClipRRect(
+                       borderRadius: BorderRadius.circular(12),
+                       child: StaticMapPreview(center: listing.location!, height: 180),
+                     ),
+                  
+                  const SizedBox(height: 32),
 
                   // Description
                   if (listing.description.isNotEmpty) ...[
-                    const Text('Description', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-                    const SizedBox(height: 8),
-                    Text(listing.description, style: const TextStyle(fontSize: 15)),
-                    const SizedBox(height: 24),
+                    const Text('Additional Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    Text(listing.description, style: const TextStyle(fontSize: 16, height: 1.5)),
+                    const SizedBox(height: 32),
                   ],
 
-                  // Contact / Action / Job Request Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: Consumer(
-                      builder: (context, ref, child) {
-                        final currentUid = ref.watch(authRepositoryProvider).currentUser?.id;
-                        final userDoc = ref.watch(userDocProvider).valueOrNull;
-                        
-                        if (currentUid == null || userDoc == null) return const SizedBox();
+                  // Poster Info
+                  Consumer(builder: (context, ref, _) {
+                    final owner = ref.watch(userProfileProvider(listing.hostUid)).valueOrNull;
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: const Color(0xFF2E7D32).withOpacity(0.1),
+                            child: Text(owner?.fullName[0].toUpperCase() ?? 'U', style: const TextStyle(color: Color(0xFF2E7D32))),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(owner?.fullName ?? 'User', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              Text(owner?.companyName ?? 'Independent', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                            ],
+                          ),
+                          const Spacer(),
+                          if (owner?.isVerified ?? false) const Icon(Icons.verified, color: Colors.blue, size: 20),
+                        ],
+                      ),
+                    );
+                  }),
+                  
+                  const SizedBox(height: 40),
 
-                        final isOwner = currentUid == listing.hostUid;
-                        final role = userDoc.role;
+                  // Action Buttons
+                  Consumer(builder: (context, ref, _) {
+                    final currentUser = ref.watch(authRepositoryProvider).currentUser;
+                    final userDoc = ref.watch(userDocProvider).valueOrNull;
+                    
+                    if (currentUser == null) return const SizedBox();
+                    
+                    if (currentUser.id == listing.hostUid) {
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: OutlinedButton.icon(
+                          onPressed: () => ref.read(listingRepositoryProvider).archiveListing(listing.id).then((_) => context.pop()),
+                          icon: const Icon(Icons.archive_outlined),
+                          label: const Text('Archive Listing'),
+                          style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                        ),
+                      );
+                    }
 
-                        if (isOwner) {
-                           return Column(
-                             crossAxisAlignment: CrossAxisAlignment.stretch,
-                             children: [
-                               if (listing.status == ListingStatus.pending) ...[
-                                 ElevatedButton.icon(
-                                   onPressed: () async {
-                                     final jobId = await ref.read(jobRepositoryProvider).fetchJobIdForListing(listing.id);
-                                     if (jobId != null && context.mounted) {
-                                       context.push('/jobs/$jobId');
-                                     } else if (context.mounted) {
-                                       ScaffoldMessenger.of(context).showSnackBar(
-                                         const SnackBar(content: Text('Could not find associated job')),
-                                       );
-                                     }
-                                   },
-                                   icon: const Icon(Icons.visibility),
-                                   label: const Text('View Active Job'),
-                                   style: ElevatedButton.styleFrom(
-                                     backgroundColor: Colors.blue[600],
-                                     foregroundColor: Colors.white,
-                                     padding: const EdgeInsets.symmetric(vertical: 14),
-                                   ),
-                                 ),
-                                 const SizedBox(height: 12),
-                               ],
-                               ElevatedButton.icon(
-                                 onPressed: () async {
-                                     final confirm = await showDialog<bool>(
-                                       context: context,
-                                       builder: (c) => AlertDialog(
-                                         title: const Text('Delete Listing?'),
-                                         content: const Text('Are you sure you want to remove this listing?'),
-                                         actions: [
-                                           TextButton(onPressed: () => c.pop(false), child: const Text('Cancel')),
-                                           TextButton(onPressed: () => c.pop(true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
-                                         ],
-                                       ),
-                                     );
-
-                                     if (confirm == true) {
-                                       await ref.read(listingRepositoryProvider).archiveListing(listing.id);
-                                       if (context.mounted) {
-                                         context.pop();
-                                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing deleted')));
-                                       }
-                                     }
-                                 },
-                                 icon: const Icon(Icons.delete),
-                                 label: const Text('Delete Listing'),
-                                 style: ElevatedButton.styleFrom(
-                                   backgroundColor: Colors.red,
-                                   foregroundColor: Colors.white,
-                                   padding: const EdgeInsets.symmetric(vertical: 14),
-                                 ),
-                               ),
-                             ],
-                           );
-                        } 
-                        
-                        // Not Owner: Show "Contact" and optionally "Post Job"
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            ElevatedButton.icon(
+                    return Column(
+                      children: [
+                        if (userDoc?.role == UserRole.developer || userDoc?.role == UserRole.excavator) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            height: 64,
+                            child: ElevatedButton.icon(
                               onPressed: () async {
-                                  final chatId = await ref.read(chatRepositoryProvider).getOrCreateChat(
-                                    currentUid: currentUid,
-                                    otherUid: listing.hostUid,
-                                    listingId: listing.id,
-                                  );
-                                  if (context.mounted) context.push('/chat/$chatId');
+                                 final confirm = await showDialog<bool>(
+                                   context: context,
+                                   builder: (c) => AlertDialog(
+                                     title: const Text('Book this material?'),
+                                     content: const Text('This will create a haul request for drivers to pick up this material and deliver it to you.'),
+                                     actions: [
+                                       TextButton(onPressed: () => c.pop(false), child: const Text('Cancel')),
+                                       TextButton(onPressed: () => c.pop(true), child: const Text('Book Now', style: TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold))),
+                                     ],
+                                   ),
+                                 );
+
+                                 if (confirm == true && context.mounted) {
+                                   try {
+                                     await ref.read(jobRepositoryProvider).bookListing(listing.id);
+                                     if (context.mounted) {
+                                       ScaffoldMessenger.of(context).showSnackBar(
+                                         const SnackBar(content: Text('✅ Material Booked! A driver will be matched shortly.')),
+                                       );
+                                       context.pop(); // Go back to feed
+                                     }
+                                   } catch (e) {
+                                     if (context.mounted) {
+                                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                                     }
+                                   }
+                                 }
                               },
-                              icon: const Icon(Icons.chat),
-                              label: const Text('Contact Poster'),
+                              icon: const Icon(Icons.bookmark_added_outlined),
+                              label: const Text('Book Material', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                               style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                backgroundColor: const Color(0xFF2E7D32),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               ),
                             ),
-                            
-                            if (role == UserRole.developer || role == UserRole.excavator) ...[
-                               const SizedBox(height: 12),
-                               if (listing.status != ListingStatus.active)
-                                  ElevatedButton.icon(
-                                    onPressed: null,
-                                    icon: const Icon(Icons.lock_clock),
-                                    label: Text('Listing ${listing.status.name.toUpperCase()}'),
-                                    style: ElevatedButton.styleFrom(
-                                       padding: const EdgeInsets.symmetric(vertical: 14),
-                                    ),
-                                  )
-                               else
-                                  ElevatedButton.icon(
-                                    onPressed: () {
-                                       context.push('/jobs/create', extra: {
-                                          'listingId': listing.id,
-                                          'hostUid': currentUid, 
-                                          'material': listing.material.name,
-                                          'quantity': listing.quantity,
-                                          // location isn't passed in extra but CreateJob fetches it via listingId
-                                       });
-                                    },
-                                    icon: const Icon(Icons.local_shipping),
-                                    label: const Text('Post Haul Request'),
-                                    style: ElevatedButton.styleFrom(
-                                       backgroundColor: Colors.blue[800],
-                                       foregroundColor: Colors.white,
-                                       padding: const EdgeInsets.symmetric(vertical: 14),
-                                    ),
-                                  ),
-                            ],
-                          ],
-                        );
-                      },
-                    ),
-                  ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: OutlinedButton.icon(
+                            onPressed: () async {
+                               final chatId = await ref.read(chatRepositoryProvider).getOrCreateChat(
+                                 currentUid: currentUser.id,
+                                 otherUid: listing.hostUid,
+                                 listingId: listing.id,
+                               );
+                               if (context.mounted) context.push('/chat/$chatId');
+                            },
+                            icon: const Icon(Icons.chat_bubble_outline),
+                            label: const Text('Message Seller', style: TextStyle(fontWeight: FontWeight.bold)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF2E7D32),
+                              side: const BorderSide(color: Color(0xFF2E7D32)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
-    );
+          ],
+        ),
+      ),
   }
 }

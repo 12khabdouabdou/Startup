@@ -1,9 +1,8 @@
 import '../../../core/models/geo_point.dart';
 
 enum JobStatus {
-  open,       // New: Job posted, waiting for hauler
-  pending,    // Legacy: Job created with hauler (or pending approval)
-  assigned,   // Hauler accepted / Assigned
+  pending,    // Job created, waiting for hauler (corresponds to 'open' in board)
+  accepted,   // Hauler accepted
   enRoute,    // Hauler driving to pickup
   atPickup,   // Hauler arrived at pickup
   loaded,     // Material loaded onto truck
@@ -41,7 +40,7 @@ class Job {
     required this.hostUid,
     this.haulerUid, // Allow null
     this.haulerName,
-    this.status = JobStatus.open, // Default to open if not specified
+    this.status = JobStatus.pending, // Default to pending if not specified
     this.pickupAddress,
     this.pickupLocation,
     this.dropoffAddress,
@@ -120,7 +119,7 @@ class Job {
       haulerName: (data['hauler_name'] ?? data['haulerName']) as String?,
       status: JobStatus.values.firstWhere(
         (e) => e.name == (data['status'] as String? ?? 'open'),
-        orElse: () => JobStatus.open,
+        orElse: () => JobStatus.pending,
       ),
       pickupAddress: (data['pickup_address'] ?? data['pickupAddress']) as String?,
       pickupLocation: parseGeo((data['pickup_location_geojson'] ?? data['pickup_location'] ?? data['pickupLocation'])),

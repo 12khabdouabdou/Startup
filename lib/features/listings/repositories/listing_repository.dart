@@ -65,11 +65,31 @@ class ListingRepository {
   // Read: Single listing
   Future<Listing?> fetchListing(String id) async {
     try {
-      final data = await _client.from('listings_view').select().eq('id', id).maybeSingle();
+      final data = await _client.from('listings').select().eq('id', id).maybeSingle();
       if (data == null) return null;
       return Listing.fromMap(data, id);
     } catch (e) {
       return null;
+    }
+  }
+
+  // Spatial Search (FR9)
+  Future<List<Listing>> fetchNearbyListings({
+    required double lat,
+    required double lng,
+    double radiusInMeters = 50000, // 50km default
+  }) async {
+    try {
+      // Calls the search_listings RPC defined in Supabase
+      final List<dynamic> data = await _client.rpc('search_listings', params: {
+        'lat': lat,
+        'lng': lng,
+        'radius_meters': radiusInMeters,
+      });
+
+      return data.map((json) => Listing.fromMap(json, json['id'] as String)).toList();
+    } catch (e) {
+      return [];
     }
   }
 }

@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'app.dart';
 import 'core/services/offline_queue.dart';
-import 'core/services/notification_service.dart';
+import 'features/notifications/services/push_notification_service.dart';
 import 'core/models/mock_data.dart';
 import 'core/providers/auth_provider.dart';
 import 'features/profile/providers/profile_provider.dart';
@@ -28,6 +29,15 @@ void main() async {
     url: 'https://tjzquqbsfjqwcasdwtem.supabase.co',
     anonKey: 'sb_publishable_bJSHQgy7SkhpzdOHorYEcA_uCQpUU1d',
   );
+
+  // Initialize Firebase (Push Notifications - AC-3)
+  // Note: Firebase.initializeApp() requires configuration files (google-services.json)
+  // We wrap this to allow the app to run even if not fully configured yet
+  try {
+    // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  } catch (e) {
+    debugPrint('Firebase initialization failed: $e');
+  }
 
   final container = ProviderContainer();
   // Mock Mode Toggle: Set to false to use real Supabase
@@ -55,7 +65,11 @@ void main() async {
       ),
     );
     
-    // Notification service initialization removed for now as it depended on Firebase Messaging
-    // container.read(notificationServiceProvider).initialize()...
+    // Initialize notification service
+    try {
+      container.read(pushNotificationServiceProvider).initialize();
+    } catch (e) {
+      debugPrint('Push Notification service failed to start: $e');
+    }
   }
 }

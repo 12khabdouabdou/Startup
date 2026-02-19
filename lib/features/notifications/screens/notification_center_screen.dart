@@ -11,9 +11,10 @@ class NotificationCenterScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notificationsAsync = ref.watch(notificationsProvider);
-    final theme = Theme.of(context);
+    const forestGreen = Color(0xFF2E7D32);
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
@@ -24,8 +25,9 @@ class NotificationCenterScreen extends ConsumerWidget {
                 ref.read(notificationRepositoryProvider).markAllAsRead(uid);
               }
             },
-            child: const Text('Mark all read', style: TextStyle(color: Colors.white, fontSize: 12)),
+            child: const Text('Mark all read', style: TextStyle(color: forestGreen, fontWeight: FontWeight.bold)),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: notificationsAsync.when(
@@ -35,86 +37,139 @@ class NotificationCenterScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.notifications_none, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text('No notifications yet', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.notifications_none_outlined, size: 48, color: Colors.grey[300]),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text('No notifications yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text('We\'ll alert you when there\'s news! 🔔', style: TextStyle(color: Colors.grey[600])),
                 ],
               ),
             );
           }
 
-          return ListView.separated(
-            itemCount: notifications.length,
-            separatorBuilder: (_, __) => const Divider(height: 1, indent: 16, endIndent: 16),
-            itemBuilder: (context, index) {
-              final n = notifications[index];
-              return ListTile(
-                tileColor: n.isRead ? null : theme.colorScheme.primaryContainer.withValues(alpha: 0.08),
-                leading: CircleAvatar(
-                  backgroundColor: n.isRead
-                      ? Colors.grey[300]
-                      : theme.colorScheme.primary.withValues(alpha: 0.15),
-                  child: Icon(
-                    _iconForTitle(n.title),
-                    color: n.isRead ? Colors.grey : theme.colorScheme.primary,
-                    size: 20,
-                  ),
-                ),
-                title: Text(
-                  n.title,
-                  style: TextStyle(
-                    fontWeight: n.isRead ? FontWeight.normal : FontWeight.w600,
-                  ),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(n.body, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 2),
-                    Text(
-                      _relativeTime(n.createdAt),
-                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                    ),
-                  ],
-                ),
-                isThreeLine: true,
-                onTap: () {
-                  // Mark as read
-                  if (!n.isRead) {
-                    ref.read(notificationRepositoryProvider).markAsRead(n.id);
-                  }
-                  // Navigate if deep-link route is present
-                  if (n.route != null && n.route!.isNotEmpty) {
-                    context.push(n.route!);
-                  }
-                },
-              );
-            },
+          return RefreshIndicator(
+            onRefresh: () async => ref.invalidate(notificationsProvider),
+            color: forestGreen,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: notifications.length,
+              separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey[100]),
+              itemBuilder: (context, index) {
+                final n = notifications[index];
+                return _NotificationTile(notification: n);
+              },
+            ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: CircularProgressIndicator(color: forestGreen)),
         error: (err, _) => Center(child: Text('Error: $err')),
       ),
+    );
+  }
+}
+
+class _NotificationTile extends ConsumerWidget {
+  final AppNotification notification;
+  const _NotificationTile({required this.notification});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    const forestGreen = Color(0xFF2E7D32);
+    final isRead = notification.isRead;
+
+    return ListTile(
+      onTap: () {
+        if (!isRead) {
+          ref.read(notificationRepositoryProvider).markAsRead(notification.id);
+        }
+        if (notification.route != null && notification.route!.isNotEmpty) {
+          context.push(notification.route!);
+        }
+      },
+      tileColor: isRead ? null : forestGreen.withOpacity(0.04),
+      leading: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isRead ? Colors.grey[100] : forestGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              _iconForTitle(notification.title),
+              color: isRead ? Colors.grey[600] : forestGreen,
+              size: 22,
+            ),
+          ),
+          if (!isRead)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+              ),
+            ),
+        ],
+      ),
+      title: Text(
+        notification.title,
+        style: TextStyle(
+          fontWeight: isRead ? FontWeight.w500 : FontWeight.bold,
+          fontSize: 15,
+        ),
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 4),
+          Text(
+            notification.body,
+            style: TextStyle(color: Colors.grey[700], fontSize: 13, height: 1.3),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _relativeTime(notification.createdAt),
+            style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+      isThreeLine: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
     );
   }
 
   IconData _iconForTitle(String title) {
     final lower = title.toLowerCase();
-    if (lower.contains('job')) return Icons.work_outline;
+    if (lower.contains('job') || lower.contains('driver')) return Icons.local_shipping_outlined;
     if (lower.contains('review')) return Icons.star_outline;
-    if (lower.contains('message')) return Icons.chat_bubble_outline;
-    if (lower.contains('listing')) return Icons.list_alt;
-    if (lower.contains('approved')) return Icons.check_circle_outline;
-    if (lower.contains('billing')) return Icons.receipt_long_outlined;
-    return Icons.notifications_outlined;
+    if (lower.contains('message') || lower.contains('chat')) return Icons.chat_bubble_outline;
+    if (lower.contains('listing') || lower.contains('material')) return Icons.category_outlined;
+    if (lower.contains('approved') || lower.contains('verified')) return Icons.verified_user_outlined;
+    if (lower.contains('billing') || lower.contains('payment')) return Icons.payments_outlined;
+    return Icons.notifications_none_outlined;
   }
 
   String _relativeTime(DateTime dt) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return DateFormat.MMMd().format(dt);
+    if (diff.inMinutes < 1) return 'JUST NOW';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}M AGO';
+    if (diff.inHours < 24) return '${diff.inHours}H AGO';
+    if (diff.inDays < 7) return '${diff.inDays}D AGO';
+    return DateFormat.MMMd().format(dt).toUpperCase();
   }
 }

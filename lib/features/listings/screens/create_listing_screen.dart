@@ -6,11 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'package:fill_exchange/core/services/storage_service.dart';
 import 'package:fill_exchange/features/auth/repositories/auth_repository.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:image/image.dart' as img;
+import 'package:path_provider/path_provider.dart';
 import '../../../core/models/geo_point.dart';
 import '../models/listing_model.dart';
 import '../repositories/listing_repository.dart';
-import '../../maps/screens/location_picker_screen.dart';
-import '../../maps/widgets/static_map_preview.dart';
 
 class CreateListingScreen extends ConsumerStatefulWidget {
   const CreateListingScreen({super.key});
@@ -19,353 +19,301 @@ class CreateListingScreen extends ConsumerStatefulWidget {
   ConsumerState<CreateListingScreen> createState() => _CreateListingScreenState();
 }
 
-enum _Step { basic, details, location, photos }
+enum _CreateStep { photo, material, details }
 
 class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
-  _Step _currentStep = _Step.basic;
+  _CreateStep _currentStep = _CreateStep.photo;
   bool _isLoading = false;
-
-  // Form Data
-  ListingType _type = ListingType.offering;
-  FillMaterial _material = FillMaterial.cleanFill;
+  XFile? _capturedPhoto;
+  File? _compressedPhoto;
+  
+  // Data
+  FillMaterial? _selectedMaterial;
   final _qtyController = TextEditingController();
-  VolumeUnit _unit = VolumeUnit.cubicYards;
-  final _priceController = TextEditingController();
-  bool _isFree = true;
-  String? _currency = 'USD';
+  final _priceController = TextEditingController(text: '0');
   final _addressController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final List<XFile> _selectedPhotos = [];
-  GeoPoint? _currentLocation;
+  GeoPoint? _captureLocation;
+  VolumeUnit _selectedUnit = VolumeUnit.loads;
 
-  final _formKey = GlobalKey<FormState>();
+  @override
+  void initState() {
+    super.initState();
+    // Immediate camera trigger - Story 3.1 AC
+    WidgetsBinding.instance.addPostFrameCallback((_) => _takePhoto());
+  }
 
   @override
   void dispose() {
     _qtyController.dispose();
     _priceController.dispose();
     _addressController.dispose();
-    _descriptionController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _takePhoto() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => _selectedPhotos.add(picked));
+    try {
+      // Capture location simultaneously
+      _getLocation();
+
+      final photo = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80, // Initial JPEG quality compression
+        maxWidth: 1280,   // Story 3.1 AC
+      );
+
+      if (photo == null) {
+        if (mounted) context.pop(); // User cancelled camera, exit flow
+        return;
+      }
+
+      setState(() {
+        _capturedPhoto = photo;
+        _currentStep = _CreateStep.material;
+      });
+      
+      _compressImage(File(photo.path));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Camera error: $e')));
+        context.pop();
+      }
     }
   }
 
-  Future<void> _getCurrentLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location services are disabled.')));
-      return;
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permissions are denied')));
-        return;
-      }
-    }
-    
-    if (permission == LocationPermission.deniedForever) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permissions are permanently denied.')));
-      return;
-    } 
-
-    setState(() => _isLoading = true);
+  Future<void> _getLocation() async {
     try {
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
       setState(() {
-        _currentLocation = GeoPoint(position.latitude, position.longitude);
-        // If address is empty, fill with coords as placeholder
-        if (_addressController.text.isEmpty) {
-           _addressController.text = "Lat: ${position.latitude.toStringAsFixed(4)}, Lng: ${position.longitude.toStringAsFixed(4)}";
-        }
+        _captureLocation = GeoPoint(position.latitude, position.longitude);
+        _addressController.text = "Detecting address...";
       });
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location Acquired!')));
-    } catch (e) {
-       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error getting location: $e')));
-    } finally {
-       if (mounted) setState(() => _isLoading = false);
+      
+      _addressController.text = "GPS: ${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}";
+    } catch (_) {
+    }
+  }
+
+  Future<void> _compressImage(File file) async {
+    // Advanced compression via 'image' package as per Story 3.1 AC
+    final bytes = await file.readAsBytes();
+    final image = img.decodeImage(bytes);
+    if (image == null) return;
+
+    final compressedBytes = img.encodeJpg(image, quality: 80);
+    final tempDir = await getTemporaryDirectory();
+    final compressedFile = File('${tempDir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg');
+    await compressedFile.writeAsBytes(compressedBytes);
+    
+    if (mounted) {
+      setState(() => _compressedPhoto = compressedFile);
     }
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_selectedMaterial == null || _qtyController.text.isEmpty) return;
 
     setState(() => _isLoading = true);
-    
     try {
       final user = ref.read(authRepositoryProvider).currentUser;
-      if (user == null) throw Exception('No user logged in');
+      if (user == null) throw Exception('Auth Session Expired');
 
-      // Upload Photos
+      // 1. Upload Photo to Supabase Storage
       final storage = ref.read(storageServiceProvider);
-      List<String> photoUrls = [];
-      for (var file in _selectedPhotos) {
-        final path = 'listings/${user.id}/${DateTime.now().millisecondsSinceEpoch}_${file.name}';
-        final url = await storage.uploadFile(localPath: file.path, remotePath: path);
-        if (url != null) photoUrls.add(url);
-      }
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final remotePath = 'listings/${user.id}/$fileName';
+      
+      final uploadFile = _compressedPhoto ?? File(_capturedPhoto!.path);
+      final photoUrl = await storage.uploadFile(
+        localPath: uploadFile.path,
+        remotePath: remotePath,
+      );
 
+      if (photoUrl == null) throw Exception('Photo upload failed');
+
+      // 2. Create Listing Row
       final listing = Listing(
-        id: '', // Auto-generated by repo
+        id: '', 
         hostUid: user.id,
-        type: _type,
-        material: _material,
+        type: ListingType.offering,
+        material: _selectedMaterial!,
         quantity: double.tryParse(_qtyController.text) ?? 0.0,
-        unit: _unit,
-        price: _isFree ? 0.0 : (double.tryParse(_priceController.text) ?? 0.0),
-        currency: _currency!,
-        description: _descriptionController.text.trim(),
-        photos: photoUrls,
-        address: _addressController.text.trim(),
-        location: _currentLocation,
+        unit: _selectedUnit,
+        price: double.tryParse(_priceController.text) ?? 0.0,
+        photos: [photoUrl],
+        location: _captureLocation,
+        address: _addressController.text,
         createdAt: DateTime.now(),
       );
 
       await ref.read(listingRepositoryProvider).createListing(listing);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing Created!')));
-        context.pop(); // Return to previous screen (Home)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Posted. Buyers in your area notified.')),
+        );
+        context.pop();
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // --- UI Step Builders ---
-
-  Widget _buildBasicInfo() {
-    return Column(
-      children: [
-        // ToggleButtons removed - Defaulting to Offering
-        // const SizedBox(height: 24),
-        DropdownButtonFormField<FillMaterial>(
-          value: _material,
-          decoration: const InputDecoration(labelText: 'Material Type', border: OutlineInputBorder()),
-          items: FillMaterial.values.map((e) => DropdownMenuItem(value: e, child: Text(e.name.toUpperCase()))).toList(),
-          onChanged: (v) => setState(() => _material = v!),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDetails() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: TextFormField(
-                controller: _qtyController,
-                decoration: const InputDecoration(labelText: 'Quantity', border: OutlineInputBorder()),
-                keyboardType: TextInputType.number,
-                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: DropdownButtonFormField<VolumeUnit>(
-                value: _unit,
-                decoration: const InputDecoration(labelText: 'Unit', border: OutlineInputBorder()),
-                items: VolumeUnit.values.map((e) => DropdownMenuItem(value: e, child: Text(e.name))).toList(),
-                onChanged: (v) => setState(() => _unit = v!),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        SwitchListTile(
-          title: const Text('Is it Free?'),
-          value: _isFree,
-          onChanged: (v) => setState(() => _isFree = v),
-        ),
-        if (!_isFree)
-          TextFormField(
-            controller: _priceController,
-            decoration: const InputDecoration(labelText: 'Price', prefixText: '\$', border: OutlineInputBorder()),
-            keyboardType: TextInputType.number,
-          ),
-      ],
-    );
-  }
-
-  Widget _buildLocation() {
-    return Column(
-      children: [
-        if (_currentLocation != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: StaticMapPreview(center: _currentLocation!),
-          ),
-        TextFormField(
-          controller: _addressController,
-          decoration: InputDecoration(
-            labelText: 'Address / Location Description',
-            border: const OutlineInputBorder(),
-            prefixIcon: const Icon(Icons.location_on),
-            hintText: 'e.g., 123 Main St, Springfield',
-            suffixIcon: IconButton(
-               icon: const Icon(Icons.map, color: Colors.blue),
-               tooltip: 'Pick on Map',
-               onPressed: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (c) => LocationPickerScreen(initialLocation: _currentLocation)),
-                  );
-                  if (result is LocationResult) {
-                     setState(() {
-                        _currentLocation = result.point;
-                        _addressController.text = result.address;
-                     });
-                  }
-               },
-            ),
-          ),
-          validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-          maxLines: 2,
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: _getCurrentLocation,
-          icon: const Icon(Icons.my_location),
-          label: const Text('Use Current Location'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPhotos() {
-    return Column(
-      children: [
-        TextFormField(
-          controller: _descriptionController,
-          decoration: const InputDecoration(labelText: 'Description (Optional)', border: OutlineInputBorder()),
-          maxLines: 3,
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            const Text('Photos (Optional)'),
-            const Spacer(),
-            IconButton(onPressed: _pickImage, icon: const Icon(Icons.add_a_photo)),
-          ],
-        ),
-        if (_selectedPhotos.isNotEmpty)
-          SizedBox(
-            height: 100,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _selectedPhotos.length,
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: Stack(
-                    children: [
-                      Image.file(File(_selectedPhotos[index].path), width: 100, height: 100, fit: BoxFit.cover),
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedPhotos.removeAt(index)),
-                          child: const CircleAvatar(radius: 10, backgroundColor: Colors.red, child: Icon(Icons.close, size: 12, color: Colors.white)),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Listing')),
-      body: Form(
-        key: _formKey,
-        child: Stepper( // Standard Stepper or Custom?
-          type: StepperType.vertical,
-          currentStep: _currentStep.index,
-          onStepContinue: () {
-             if (_currentStep == _Step.location && _currentLocation == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please mark a location on the map or use current location')),
-                );
-                return;
-             }
-
-             if (_currentStep == _Step.photos) {
-                _submit();
-             } else {
-                setState(() => _currentStep = _Step.values[_currentStep.index + 1]);
-             }
-          },
-          onStepCancel: () {
-             if (_currentStep.index > 0) {
-                setState(() => _currentStep = _Step.values[_currentStep.index - 1]);
-             } else {
-                context.pop();
-             }
-          },
-          controlsBuilder: (context, details) {
-             return Padding(
-               padding: const EdgeInsets.only(top: 16.0),
-               child: Row(
-                 children: [
-                   ElevatedButton(
-                     onPressed: _isLoading ? null : details.onStepContinue,
-                     child: _currentStep == _Step.photos
-                         ? (_isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator()) : const Text('Post Listing'))
-                         : const Text('Next'),
-                   ),
-                   const SizedBox(width: 16),
-                   if (_currentStep.index > 0 || !_isLoading)
-                     TextButton(onPressed: _isLoading ? null : details.onStepCancel, child: Text(_currentStep.index == 0 ? 'Cancel' : 'Back')),
-                 ],
-               ),
-             );
-          },
-          steps: [
-            Step(
-              title: const Text('Type & Material'),
-              content: _buildBasicInfo(),
-              isActive: _currentStep.index >= 0,
-            ),
-            Step(
-              title: const Text('Details'),
-              content: _buildDetails(),
-              isActive: _currentStep.index >= 1,
-            ),
-            Step(
-              title: const Text('Location'),
-              content: _buildLocation(),
-              isActive: _currentStep.index >= 2,
-            ),
-            Step(
-              title: const Text('Photos & Description'),
-              content: _buildPhotos(),
-              isActive: _currentStep.index >= 3,
-            ),
-          ],
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text(_currentStep == _CreateStep.material ? 'Select Soil Type' : 'Listing Details'),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => context.pop(),
         ),
+      ),
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator())
+        : _buildStepContent(),
+    );
+  }
+
+  Widget _buildStepContent() {
+    switch (_currentStep) {
+      case _CreateStep.photo:
+        return const Center(child: Text('Opening Camera...'));
+      case _CreateStep.material:
+        return _buildMaterialStep();
+      case _CreateStep.details:
+        return _buildDetailsStep();
+    }
+  }
+
+  Widget _buildMaterialStep() {
+    return Column(
+      children: [
+        if (_capturedPhoto != null)
+           Expanded(
+             flex: 2,
+             child: Container(
+               width: double.infinity,
+               margin: const EdgeInsets.all(16),
+               decoration: BoxDecoration(
+                 borderRadius: BorderRadius.circular(12),
+                 image: DecorationImage(
+                   image: FileImage(File(_capturedPhoto!.path)),
+                   fit: BoxFit.cover,
+                 ),
+               ),
+               child: Align(
+                 alignment: Alignment.topRight,
+                 child: IconButton(
+                   icon: const CircleAvatar(backgroundColor: Colors.white70, child: Icon(Icons.refresh)),
+                   onPressed: _takePhoto,
+                 ),
+               ),
+             ),
+           ),
+        const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text('What are you moving?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        ),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: FillMaterial.values.map((m) {
+            final isSelected = _selectedMaterial == m;
+            return ChoiceChip(
+              label: Text(m.name[0].toUpperCase() + m.name.substring(1)),
+              selected: isSelected,
+              onSelected: (val) => setState(() => _selectedMaterial = val ? m : null),
+              selectedColor: const Color(0xFF2E7D32),
+              labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            );
+          }).toList(),
+        ),
+        const Spacer(),
+        Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton(
+              onPressed: _selectedMaterial == null ? null : () => setState(() => _currentStep = _CreateStep.details),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E7D32), foregroundColor: Colors.white),
+              child: const Text('Use Photo & Material →', style: TextStyle(fontSize: 18)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailsStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Quantity & Location', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: TextFormField(
+                  controller: _qtyController,
+                  decoration: const InputDecoration(labelText: 'Quantity', border: OutlineInputBorder()),
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DropdownButtonFormField<VolumeUnit>(
+                  value: _selectedUnit,
+                  items: VolumeUnit.values.map((u) => DropdownMenuItem(value: u, child: Text(u.name))).toList(),
+                  onChanged: (v) => setState(() => _selectedUnit = v!),
+                  decoration: const InputDecoration(border: OutlineInputBorder()),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _addressController,
+            decoration: const InputDecoration(
+              labelText: 'Location / Site Name',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.location_on, color: Color(0xFF2E7D32)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _priceController,
+            decoration: const InputDecoration(
+              labelText: 'Price per Load (\$)',
+              hintText: '0 for free',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.attach_money),
+            ),
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            height: 64,
+            child: ElevatedButton(
+              onPressed: _submit,
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E7D32), foregroundColor: Colors.white),
+              child: const Text('Post Dirt →', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
       ),
     );
   }

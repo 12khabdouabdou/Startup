@@ -17,7 +17,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  // ListingType? _typeFilter; // Removed type filter
   FillMaterial? _materialFilter;
   String _searchQuery = '';
   final _searchController = TextEditingController();
@@ -28,38 +27,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _searchController.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     final listingsAsync = ref.watch(activeListingsProvider);
     final unreadCount = ref.watch(unreadCountProvider);
+    const forestGreen = Color(0xFF2E7D32);
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FBF9),
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
         title: _showSearch
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
+                style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
                   hintText: 'Search material, location...',
-                  hintStyle: TextStyle(color: Colors.white70),
+                  hintStyle: TextStyle(color: Colors.grey[400]),
                   border: InputBorder.none,
                   filled: false,
                 ),
                 onChanged: (v) => setState(() => _searchQuery = v.trim()),
               )
-            : const Text('FillExchange'),
+            : const Text('Fill Exchange', style: TextStyle(color: forestGreen, fontWeight: FontWeight.w900, fontSize: 22, letterSpacing: -0.5)),
         actions: [
           IconButton(
             icon: Badge(
               isLabelVisible: (unreadCount.valueOrNull ?? 0) > 0,
               label: Text('${unreadCount.valueOrNull ?? 0}'),
-              child: const Icon(Icons.notifications_outlined),
+              backgroundColor: Colors.orange,
+              child: const Icon(Icons.notifications_none_rounded, color: Colors.black87),
             ),
             onPressed: () => context.push('/notifications'),
           ),
           IconButton(
-            icon: Icon(_showSearch ? Icons.close : Icons.search),
+            icon: Icon(_showSearch ? Icons.close : Icons.search_rounded, color: Colors.black87),
             onPressed: () {
               setState(() {
                 _showSearch = !_showSearch;
@@ -70,38 +75,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               });
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () => _showFilterSheet(context),
-          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
           // Filter Chips Row
-          _buildFilterChips(),
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _buildFilterChips(),
+          ),
 
           // Active filter summary
           if (_materialFilter != null || _searchQuery.isNotEmpty)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.fromLTRB(20, 12, 16, 12),
+              color: forestGreen.withOpacity(0.04),
               child: Row(
                 children: [
-                  Icon(Icons.tune, size: 14, color: Colors.grey[600]),
-                  const SizedBox(width: 6),
+                  const Icon(Icons.tune_rounded, size: 14, color: forestGreen),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       _buildFilterSummary(),
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      style: const TextStyle(fontSize: 12, color: forestGreen, fontWeight: FontWeight.bold),
                     ),
                   ),
-                  TextButton(
-                    onPressed: () => setState(() {
+                  GestureDetector(
+                    onTap: () => setState(() {
                       _materialFilter = null;
                       _searchQuery = '';
                       _searchController.clear();
                     }),
-                    child: const Text('Clear', style: TextStyle(fontSize: 12)),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(color: forestGreen.withOpacity(0.1), shape: BoxShape.circle),
+                      child: const Icon(Icons.close, size: 14, color: forestGreen),
+                    ),
                   ),
                 ],
               ),
@@ -114,58 +125,68 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 final filtered = _applyFilters(listings);
                 if (filtered.isEmpty) {
                   return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.inbox, size: 64, color: Colors.grey[400]),
-                        const SizedBox(height: 16),
-                        Text(
-                          listings.isEmpty
-                              ? 'No listings yet.\nBe the first to post!'
-                              : 'No listings match your filters.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (_) => CreateAlertDialog(initialMaterial: _materialFilter),
-                            );
-                          },
-                          icon: const Icon(Icons.notifications_active),
-                          label: const Text('Get Notified for New Listings'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue[100],
-                            foregroundColor: Colors.blue[900],
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(40),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(32),
+                            decoration: BoxDecoration(color: Colors.grey[50], shape: BoxShape.circle),
+                            child: Icon(Icons.search_off_rounded, size: 64, color: Colors.grey[200]),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 24),
+                          Text(
+                            listings.isEmpty
+                                ? 'Marketplace is Quiet\nBe the first to post material!'
+                                : 'No matching hauls found\nTry adjusting your filters.',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.3),
+                          ),
+                          const SizedBox(height: 32),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => CreateAlertDialog(initialMaterial: _materialFilter),
+                              );
+                            },
+                            icon: const Icon(Icons.notifications_active_outlined),
+                            label: const Text('CREATE SAVED SEARCH'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: forestGreen,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              elevation: 0,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }
                 return RefreshIndicator(
                   onRefresh: () async => ref.invalidate(activeListingsProvider),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(top: 8, bottom: 80),
+                  color: forestGreen,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                     itemCount: filtered.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 16),
                     itemBuilder: (context, index) {
-                       // Filter out Needing listings if any exist in DB (just in case)
-                       if (filtered[index].type == ListingType.needing) return const SizedBox.shrink();
+                      final item = filtered[index];
+                      // Filter out Needing listings if any exist in DB (just in case)
+                      if (item.type == ListingType.needing) return const SizedBox.shrink();
                        
                       return ListingCard(
-                        listing: filtered[index],
-                        onTap: () {
-                          context.push('/listings/${filtered[index].id}', extra: filtered[index]);
-                        },
+                        listing: item,
+                        onTap: () => context.push('/listings/${item.id}', extra: item),
                       );
                     },
                   ),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator(color: forestGreen)),
               error: (err, stack) => Center(child: Text('Error: $err')),
             ),
           ),
@@ -176,8 +197,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ? null
             : FloatingActionButton.extended(
                 onPressed: () => context.push('/listings/create'),
-                label: const Text('Post'),
-                icon: const Icon(Icons.add),
+                backgroundColor: forestGreen,
+                label: const Text('POST MATERIAL', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                icon: const Icon(Icons.add, color: Colors.white),
               ),
         loading: () => null,
         error: (_, __) => null,
@@ -187,9 +209,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   List<Listing> _applyFilters(List<Listing> listings) {
     return listings.where((l) {
-      // Hard filter: Only show Offering (Seller) listings
       if (l.type == ListingType.needing) return false;
-      
       if (_materialFilter != null && l.material != _materialFilter) return false;
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
@@ -204,30 +224,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   String _buildFilterSummary() {
     final parts = <String>[];
-    if (_materialFilter != null) parts.add(_materialFilter!.name[0].toUpperCase() + _materialFilter!.name.substring(1));
-    if (_searchQuery.isNotEmpty) parts.add('"$_searchQuery"');
-    return 'Filtered by: ${parts.join(', ')}';
+    if (_materialFilter != null) parts.add(_materialFilter!.name.toUpperCase());
+    if (_searchQuery.isNotEmpty) parts.add('"${_searchQuery.toUpperCase()}"');
+    return 'RESULTS FOR: ${parts.join(' + ')}';
   }
 
   Widget _buildFilterChips() {
+    const forestGreen = Color(0xFF2E7D32);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          // Removed ListingType Chips
-          
-          // Material Filters
           ...FillMaterial.values.map((m) {
-            final label = m.name[0].toUpperCase() + m.name.substring(1);
+            final label = m.name[0].toUpperCase() + m.name.substring(1).toLowerCase();
+            final isSelected = _materialFilter == m;
             return Padding(
-              padding: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.only(right: 12),
               child: FilterChip(
                 label: Text(label),
-                selected: _materialFilter == m,
-                onSelected: (selected) {
-                  setState(() => _materialFilter = selected ? m : null);
-                },
+                selected: isSelected,
+                onSelected: (selected) => setState(() => _materialFilter = selected ? m : null),
+                backgroundColor: Colors.white,
+                selectedColor: forestGreen.withOpacity(0.12),
+                checkmarkColor: forestGreen,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(color: isSelected ? forestGreen.withOpacity(0.5) : Colors.grey[200]!),
+                ),
+                labelStyle: TextStyle(
+                  color: isSelected ? forestGreen : Colors.black87,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 13,
+                ),
               ),
             );
           }),
@@ -235,6 +264,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
   }
+}
 
   void _showFilterSheet(BuildContext context) {
     showModalBottomSheet(

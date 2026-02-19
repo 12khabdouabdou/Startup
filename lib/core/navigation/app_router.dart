@@ -37,6 +37,7 @@ import '../../features/profile/screens/edit_profile_screen.dart';
 import '../../features/messaging/screens/chat_list_screen.dart';
 import '../../features/messaging/screens/chat_screen.dart';
 import '../../features/profile/providers/profile_provider.dart';
+import '../../features/fleet/screens/fleet_screen.dart';
 import '../models/app_user.dart';
 
 /// Notifier to refresh router when auth or profile state changes
@@ -133,6 +134,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/activity', builder: (context, state) => const ActivityScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/messages', builder: (context, state) => const ChatListScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/profile', builder: (context, state) => const ProfileScreen()),
@@ -249,10 +253,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const EditProfileScreen(),
       ),
       GoRoute(
-        path: '/messages',
-        builder: (context, state) => const ChatListScreen(),
-      ),
-      GoRoute(
         path: '/chat/:chatId',
         builder: (context, state) => ChatScreen(
           chatId: state.pathParameters['chatId'] ?? '',
@@ -261,6 +261,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/notifications',
         builder: (context, state) => const NotificationCenterScreen(),
+      ),
+      GoRoute(
+        path: '/fleet',
+        builder: (context, state) => const FleetScreen(),
       ),
     ],
   );

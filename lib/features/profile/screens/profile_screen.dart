@@ -13,136 +13,284 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userDocAsync = ref.watch(userDocProvider);
+    const forestGreen = Color(0xFF2E7D32);
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FBF9),
       appBar: AppBar(
-        title: const Text('Profile'),
-        actions: const [NotificationBell()],
+        title: const Text('Account'),
+        actions: const [NotificationBell(), SizedBox(width: 8)],
+        backgroundColor: Colors.white,
+        elevation: 0,
       ),
       body: userDocAsync.when(
         data: (user) {
-          if (user == null) {
-            return const Center(child: Text('No profile data'));
-          }
+          if (user == null) return const Center(child: Text('No profile data'));
+          
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
             child: Column(
               children: [
-                // Avatar
-                CircleAvatar(
-                  radius: 48,
-                  backgroundColor: Colors.green.withOpacity(0.15),
-                  child: Text(
-                    (user.displayName ?? 'U')[0].toUpperCase(),
-                    style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.green),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  user.displayName ?? 'Unknown',
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
+                // Premium Header
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
                   ),
-                  child: Text(
-                    user.role.name.toUpperCase(),
-                    style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 12),
-                  ),
-                ),
-                if (user.reviewCount > 0) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+                  child: Column(
                     children: [
-                      const Icon(Icons.star, color: Colors.amber, size: 20),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${user.rating.toStringAsFixed(1)} (${user.reviewCount} reviews)',
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                      Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: forestGreen.withOpacity(0.1), width: 2),
+                            ),
+                            child: CircleAvatar(
+                              radius: 50,
+                              backgroundColor: forestGreen.withOpacity(0.05),
+                              child: Text(
+                                (user.displayName ?? 'U')[0].toUpperCase(),
+                                style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: forestGreen),
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(color: forestGreen, shape: BoxShape.circle),
+                            child: const Icon(Icons.edit_outlined, size: 16, color: Colors.white),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 20),
+                      Text(
+                        user.displayName ?? 'Professional User',
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: forestGreen.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          user.role.name.toUpperCase(),
+                          style: const TextStyle(color: forestGreen, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5),
+                        ),
+                      ),
+                      if (user.reviewCount > 0) ...[
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _StatItem(label: 'RATING', value: user.rating.toStringAsFixed(1), icon: Icons.star_rounded, iconColor: Colors.amber[700]!),
+                            Container(height: 24, width: 1, color: Colors.grey[200], margin: const EdgeInsets.symmetric(horizontal: 24)),
+                            _StatItem(label: 'REVIEWS', value: '${user.reviewCount}', icon: Icons.comment_outlined, iconColor: Colors.grey[400]!),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
-                ],
-                const SizedBox(height: 32),
-
-                // Profile Info Cards
-                _ProfileTile(icon: Icons.business, label: 'Company', value: user.companyName ?? 'N/A'),
-                _ProfileTile(icon: Icons.phone, label: 'Phone', value: user.phone ?? 'N/A'),
-                _ProfileTile(icon: Icons.verified_user, label: 'Status', value: user.status.name.toUpperCase()),
-                if (user.fleetSize != null)
-                  _ProfileTile(icon: Icons.local_shipping, label: 'Fleet Size', value: '${user.fleetSize}'),
+                ),
 
                 const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 8),
 
-                // Settings Section
-                ListTile(
-                  leading: const Icon(Icons.edit_outlined),
-                  title: const Text('Edit Profile'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/profile/edit'),
+                // Settings Sections
+                _SettingsGroup(
+                  title: 'PROFESSIONAL DETAILS',
+                  children: [
+                    _ProfileDetailRow(icon: Icons.business_outlined, label: 'Organization', value: user.companyName ?? 'Independent'),
+                    _ProfileDetailRow(icon: Icons.phone_outlined, label: 'Direct Line', value: user.phone ?? 'Not set'),
+                    if (user.fleetSize != null)
+                      _ProfileDetailRow(icon: Icons.local_shipping_outlined, label: 'Fleet Assets', value: '${user.fleetSize} Heavy Vehicles'),
+                  ],
                 ),
-                ListTile(
-                  leading: const Icon(Icons.chat_outlined),
-                  title: const Text('Messages'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/messages'),
+
+                const SizedBox(height: 24),
+
+                _SettingsGroup(
+                  title: 'PREFERENCES',
+                  children: [
+                    if (user.role == UserRole.hauler)
+                      _SettingsTile(
+                        icon: Icons.local_shipping_outlined, 
+                        title: 'Fleet Management', 
+                        subtitle: 'Manage trucks & capacity',
+                        onTap: () => context.push('/fleet'),
+                      ),
+                    _SettingsTile(
+                      icon: Icons.notifications_none_rounded, 
+                      title: 'Smart Alerts', 
+                      subtitle: 'Radius & Event Triggers',
+                      onTap: () => context.push('/settings/notifications'),
+                    ),
+                    _SettingsTile(
+                      icon: Icons.account_balance_wallet_outlined, 
+                      title: 'Billing & Finance', 
+                      subtitle: 'Earnings & Manifests',
+                      onTap: () => context.push('/billing'),
+                    ),
+                  ],
                 ),
-                ListTile(
-                  leading: const Icon(Icons.notifications_outlined),
-                  title: const Text('Notification Settings'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/settings/notifications'),
+
+                const SizedBox(height: 24),
+
+                _SettingsGroup(
+                  title: 'MOCK DEBUG TOOLS',
+                  isVisible: user.id.startsWith('mock-'),
+                  children: [
+                    _SettingsTile(
+                      icon: Icons.supervised_user_circle_outlined, 
+                      title: 'Role Simulation', 
+                      subtitle: 'Switch between user types',
+                      onTap: () => _showRoleSwitcher(context, ref),
+                      iconColor: Colors.purple,
+                    ),
+                  ],
                 ),
-                ListTile(
-                  leading: const Icon(Icons.receipt_long_outlined),
-                  title: const Text('Billing & Finance'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/billing'),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
+
+                const SizedBox(height: 32),
+                
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: TextButton.icon(
                     onPressed: () => ref.read(authRepositoryProvider).signOut(),
-                    icon: const Icon(Icons.logout, color: Colors.red),
-                    label: const Text('Sign Out', style: TextStyle(color: Colors.red)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.red),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    icon: const Icon(Icons.logout_rounded, size: 20),
+                    label: const Text('DISCONNECT ACCOUNT', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1, fontSize: 12)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red[700],
+                      minimumSize: const Size(double.infinity, 50),
                     ),
                   ),
                 ),
-                if (user.id.startsWith('mock-')) ...[
-                  const SizedBox(height: 24),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  const Text('Debug Options', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                  const SizedBox(height: 8),
-                  ListTile(
-                    leading: const Icon(Icons.people_alt_outlined, color: Colors.purple),
-                    title: const Text('Switch Mock Role', style: TextStyle(color: Colors.purple)),
-                    trailing: const Icon(Icons.chevron_right, color: Colors.purple),
-                    tileColor: Colors.purple.withValues(alpha: 0.05),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    onTap: () => _showRoleSwitcher(context, ref),
-                  ),
-                ],
+                const SizedBox(height: 40),
               ],
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: CircularProgressIndicator(color: forestGreen)),
         error: (err, _) => Center(child: Text('Error: $err')),
       ),
     );
   }
+}
+
+class _StatItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color iconColor;
+
+  const _StatItem({required this.label, required this.value, required this.icon, required this.iconColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: iconColor),
+            const SizedBox(width: 4),
+            Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey[400], letterSpacing: 0.5)),
+      ],
+    );
+  }
+}
+
+class _SettingsGroup extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+  final bool isVisible;
+
+  const _SettingsGroup({required this.title, required this.children, this.isVisible = true});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isVisible) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: Text(title, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[500], letterSpacing: 1.2)),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey[100]!),
+          ),
+          child: Column(children: children),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileDetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _ProfileDetailRow({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, size: 18, color: Colors.grey[600]),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 11, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 2),
+              Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final Color? iconColor;
+
+  const _SettingsTile({required this.icon, required this.title, required this.subtitle, required this.onTap, this.iconColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      leading: Icon(icon, color: iconColor ?? const Color(0xFF2E7D32)),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+      subtitle: Text(subtitle, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+      trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey[300]),
+    );
+  }
+}
 
   void _showRoleSwitcher(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(

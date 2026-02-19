@@ -1,8 +1,8 @@
 import '../../../core/models/geo_point.dart';
 
 enum ListingType { offering, needing }
-enum FillMaterial { cleanFill, topsoil, gravel, clay, mixed, other }
-enum VolumeUnit { cubicYards, tons }
+enum FillMaterial { cleanFill, topsoil, clay, sand, gravel, rock }
+enum VolumeUnit { loads, yards }
 enum ListingStatus { active, sold, archived, pending }
 
 class Listing {
@@ -102,13 +102,13 @@ class Listing {
         orElse: () => ListingType.offering,
       ),
       material: FillMaterial.values.firstWhere(
-        (e) => e.name == (data['material'] as String? ?? 'other'), // material is text
-        orElse: () => FillMaterial.other,
+        (e) => e.name == (data['material'] as String? ?? 'cleanFill'),
+        orElse: () => FillMaterial.cleanFill,
       ),
       quantity: (data['quantity'] as num?)?.toDouble() ?? 0.0,
       unit: VolumeUnit.values.firstWhere(
-        (e) => e.name == (data['unit'] as String? ?? 'cubicYards'),
-        orElse: () => VolumeUnit.cubicYards,
+        (e) => e.name == (data['unit'] as String? ?? 'loads'),
+        orElse: () => VolumeUnit.loads,
       ),
       price: (data['price'] as num?)?.toDouble() ?? 0.0,
       currency: data['currency'] as String? ?? 'USD',

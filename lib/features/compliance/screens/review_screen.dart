@@ -58,7 +58,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Review submitted! Thank you.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Review submitted! Thank you.')));
         context.pop();
       }
     } catch (e) {
@@ -76,79 +76,116 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const forestGreen = Color(0xFF2E7D32);
+    const alertGold = Color(0xFFFBC02D);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Leave a Review')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(title: const Text('Rate Experience')),
       body: _alreadyReviewed
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 64),
-                  const SizedBox(height: 16),
-                  const Text('You already reviewed this job!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-                  OutlinedButton(onPressed: () => context.pop(), child: const Text('Go Back')),
+                   Container(
+                     padding: const EdgeInsets.all(24),
+                     decoration: BoxDecoration(color: forestGreen.withOpacity(0.1), shape: BoxShape.circle),
+                     child: const Icon(Icons.check_circle_outline, color: forestGreen, size: 48),
+                   ),
+                  const SizedBox(height: 24),
+                  const Text('Feedback Received', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text('You have already reviewed this load.', style: TextStyle(color: Colors.grey[600])),
+                  const SizedBox(height: 32),
+                  TextButton(onPressed: () => context.pop(), child: const Text('Back to Activity', style: TextStyle(color: forestGreen, fontWeight: FontWeight.bold))),
                 ],
               ),
             )
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    'How was your experience with ${widget.revieweeName}?',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    'RELIABILITY & QUALITY',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[400], letterSpacing: 1.2),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'How was your work with\n${widget.revieweeName}?',
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.3),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 40),
 
                   // Star Rating
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(5, (index) {
                       final starValue = index + 1.0;
+                      final isSelected = _rating >= starValue;
                       return GestureDetector(
                         onTap: () => setState(() => _rating = starValue),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
                           child: Icon(
-                            _rating >= starValue ? Icons.star : Icons.star_border,
-                            size: 48,
-                            color: Colors.amber,
+                            isSelected ? Icons.star_rounded : Icons.star_outline_rounded,
+                            size: 52,
+                            color: isSelected ? alertGold : Colors.grey[300],
                           ),
                         ),
                       );
                     }),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _ratingLabel,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _ratingLabel.toUpperCase(),
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1),
+                    ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 48),
 
                   // Comment
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('NOTES (OPTIONAL)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[600])),
+                  ),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: _commentController,
-                    decoration: const InputDecoration(
-                      labelText: 'Comment (optional)',
-                      border: OutlineInputBorder(),
-                      hintText: 'Tell others about your experience...',
+                    decoration: InputDecoration(
+                      hintText: 'Share any details about the pickup/drop-off...',
+                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.all(16),
                     ),
                     maxLines: 4,
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 48),
 
                   // Submit
                   SizedBox(
                     width: double.infinity,
+                    height: 56,
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _submitReview,
-                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: forestGreen,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
                       child: _isLoading
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Text('Submit Review'),
+                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white))
+                          : const Text('Submit Review', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],
@@ -158,10 +195,10 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   }
 
   String get _ratingLabel {
-    if (_rating >= 5) return 'Excellent!';
-    if (_rating >= 4) return 'Great';
-    if (_rating >= 3) return 'Good';
-    if (_rating >= 2) return 'Fair';
-    return 'Poor';
+    if (_rating >= 5) return 'Excellent — Highly Recommend';
+    if (_rating >= 4) return 'Great — No Issues';
+    if (_rating >= 3) return 'Satisfactory';
+    if (_rating >= 2) return 'Poor — Multiple Issues';
+    return 'Very Poor';
   }
 }

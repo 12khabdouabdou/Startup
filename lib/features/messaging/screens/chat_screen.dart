@@ -20,6 +20,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   bool _isSending = false;
+  final forestGreen = const Color(0xFF2E7D32);
 
   Future<void> _send() async {
     final text = _controller.text.trim();
@@ -76,32 +77,38 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final otherName = otherProfileAsync.value?.fullName ?? 'User';
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FBF9),
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(otherName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(otherName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
             if (otherProfileAsync.isLoading) 
-              const Text('Loading...', style: TextStyle(fontSize: 12))
-            else if (chatAsync.hasError)
-              const Text('Connection error', style: TextStyle(fontSize: 12)),
+              Text('Syncing...', style: TextStyle(fontSize: 11, color: forestGreen.withOpacity(0.6)))
+            else
+              Text('Network Partner', style: TextStyle(fontSize: 10, color: Colors.grey[400], fontWeight: FontWeight.bold, letterSpacing: 0.5)),
           ],
         ),
         actions: [
           if (chat?.listingId?.isNotEmpty == true)
-             IconButton(
-               icon: const Icon(Icons.local_shipping),
-               tooltip: 'Create Haul Request',
-               onPressed: () => context.push('/jobs/create', extra: {
-                 'listingId': chat!.listingId,
-                 'hostUid': otherUid, // Pass hostUid so CreateJob knows who to notify
-               }),
+             Padding(
+               padding: const EdgeInsets.only(right: 8),
+               child: IconButton(
+                 icon: const Icon(Icons.local_shipping_outlined, color: forestGreen),
+                 tooltip: 'Create Haul Request',
+                 onPressed: () => context.push('/jobs/create', extra: {
+                   'listingId': chat!.listingId,
+                   'hostUid': otherUid,
+                 }),
+               ),
              ),
         ],
       ),
       body: Column(
         children: [
-          // Messages
+          // Messages Feed
           Expanded(
             child: messagesAsync.when(
               data: (messages) {
@@ -110,9 +117,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.chat, size: 48, color: Colors.grey[400]),
-                        const SizedBox(height: 12),
-                        Text('Start the conversation!', style: TextStyle(color: Colors.grey[600])),
+                        Container(
+                          padding: const EdgeInsets.all(32),
+                          decoration: BoxDecoration(color: Colors.grey[50], shape: BoxShape.circle),
+                          child: Icon(Icons.chat_bubble_outline_rounded, size: 48, color: Colors.grey[200]),
+                        ),
+                        const SizedBox(height: 16),
+                        Text('Your Secure Transmission Begins', style: TextStyle(color: Colors.grey[400], fontSize: 13, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   );
@@ -120,7 +131,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
                 return ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final msg = messages[index];
@@ -129,54 +140,63 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   },
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator(color: forestGreen)),
               error: (err, _) => Center(child: Text('Error: $err')),
             ),
           ),
 
-          // Input Bar
+          // High-End Input Bar
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             decoration: BoxDecoration(
               color: Colors.white,
+              border: Border(top: BorderSide(color: Colors.grey[100]!)),
               boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  offset: const Offset(0, -1),
-                  blurRadius: 4,
-                ),
+                BoxShadow(color: Colors.black.withOpacity(0.02), offset: const Offset(0, -4), blurRadius: 10),
               ],
             ),
             child: SafeArea(
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      style: const TextStyle(color: Colors.black87), // Fix visibility
-                      decoration: InputDecoration(
-                        hintText: 'Type a message...',
-                        hintStyle: TextStyle(color: Colors.grey[500]),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F6F5),
+                        borderRadius: BorderRadius.circular(24),
                       ),
-                      textCapitalization: TextCapitalization.sentences,
-                      onSubmitted: (_) => _send(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: TextField(
+                        controller: _controller,
+                        style: const TextStyle(color: Colors.black87, fontSize: 15),
+                        decoration: InputDecoration(
+                          hintText: 'Compose message...',
+                          hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        textCapitalization: TextCapitalization.sentences,
+                        onSubmitted: (_) => _send(),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  CircleAvatar(
-                    backgroundColor: Colors.green,
-                    child: IconButton(
-                      icon: _isSending
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(Icons.send, color: Colors.white, size: 18),
-                      onPressed: _isSending ? null : _send,
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: _isSending ? null : _send,
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: forestGreen,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(color: forestGreen.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4)),
+                        ],
+                      ),
+                      child: Center(
+                        child: _isSending
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 24),
+                      ),
                     ),
                   ),
                 ],
@@ -194,7 +214,6 @@ final _chatProvider = StreamProvider.autoDispose.family<Chat?, String>((ref, cha
   return ref.watch(chatRepositoryProvider).watchChat(chatId);
 });
 
-// Stream provider for messages
 final _messagesProvider = StreamProvider.autoDispose.family<List<ChatMessage>, String>((ref, chatId) {
   return ref.watch(chatRepositoryProvider).watchMessages(chatId);
 });
@@ -206,38 +225,43 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const forestGreen = Color(0xFF2E7D32);
+    
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isMe ? Colors.green : Colors.grey[200],
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isMe ? 16 : 4),
-            bottomRight: Radius.circular(isMe ? 4 : 16),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              message.text,
-              style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 15),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              DateFormat.jm().format(message.sentAt),
-              style: TextStyle(
-                color: isMe ? Colors.white70 : Colors.grey[500],
-                fontSize: 10,
+      child: Column(
+        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          Container(
+            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+            margin: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              color: isMe ? forestGreen : Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(20),
+                topRight: const Radius.circular(20),
+                bottomLeft: Radius.circular(isMe ? 20 : 4),
+                bottomRight: Radius.circular(isMe ? 4 : 20),
               ),
+              border: isMe ? null : Border.all(color: Colors.grey[100]!),
+              boxShadow: [
+                if (isMe) BoxShadow(color: forestGreen.withOpacity(0.15), blurRadius: 4, offset: const Offset(0, 2)),
+              ],
             ),
-          ],
-        ),
+            child: Text(
+              message.text,
+              style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 15, height: 1.4),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12, left: 4, right: 4),
+            child: Text(
+              DateFormat.jm().format(message.sentAt),
+              style: TextStyle(color: Colors.grey[400], fontSize: 9, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
       ),
     );
   }

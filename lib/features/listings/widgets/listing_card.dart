@@ -22,96 +22,105 @@ class ListingCard extends ConsumerWidget {
     final ownerName = owner?.fullName ?? 'User';
 
     // Derived Title
-    final displayTitle = '${listing.material.name.toUpperCase()} (${listing.type.name})';
+    final displayTitle = '${listing.material.name[0].toUpperCase()}${listing.material.name.substring(1)}';
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[100]!),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4)),
+        ],
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image Section
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: listing.photos.isNotEmpty
-                  ? Image.network(
-                      listing.photos.first,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.image_not_supported, color: Colors.grey),
-                      ),
-                    )
-                  : Container(
-                      color: Colors.grey[200],
-                      child: Icon(Icons.category, size: 48, color: Colors.grey[400]),
+            // Image Section with Type Badge
+            Stack(
+              children: [
+                AspectRatio(
+                  aspectRatio: 16 / 10,
+                  child: listing.photos.isNotEmpty
+                      ? Image.network(
+                          listing.photos.first,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: Colors.grey[50],
+                            child: const Icon(Icons.image_not_supported_outlined, color: Colors.grey),
+                          ),
+                        )
+                      : Container(
+                          color: Colors.grey[50],
+                          child: Icon(Icons.terrain_outlined, size: 40, color: Colors.grey[200]),
+                        ),
+                ),
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: listing.type == ListingType.offering ? const Color(0xFF2E7D32) : Colors.orange[800],
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4)],
                     ),
+                    child: Text(
+                      listing.type == ListingType.offering ? 'OFFERING' : 'REQUESTING',
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                    ),
+                  ),
+                ),
+              ],
             ),
             
             // Content Section
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title & Price
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: Text(
-                          displayTitle,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              displayTitle,
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.1),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${listing.quantity.toStringAsFixed(0)} ${listing.unit.name.toUpperCase()}',
+                              style: TextStyle(color: Colors.grey[600], fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          ],
                         ),
                       ),
-                      if (listing.price > 0)
-                        Text(
-                          '\$${listing.price.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                        )
-                      else
-                        const Text(
-                          'Free',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                        ),
+                      Text(
+                        listing.price <= 0 ? 'FREE' : '\$${listing.price.toStringAsFixed(0)}',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF2E7D32)),
+                      ),
                     ],
                   ),
                   
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 16),
                   
-                  // Material & Quantity
-                  Text(
-                    '${listing.material.name} • ${listing.quantity} m³',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                  ),
-                  
-                  const SizedBox(height: 8),
-
-                  // Location
+                  // Location Row
                   Row(
                     children: [
-                      const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                      const SizedBox(width: 4),
+                      Icon(Icons.location_on_outlined, size: 14, color: Colors.grey[400]),
+                      const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           listing.address ?? 'No Location',
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -119,31 +128,34 @@ class ListingCard extends ConsumerWidget {
                     ],
                   ),
                   
+                  const SizedBox(height: 16),
+                  const Divider(height: 1, color: Color(0xFFF5F5F5)),
                   const SizedBox(height: 12),
-                  const Divider(height: 1),
-                  const SizedBox(height: 8),
 
                   // User Info
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 10,
-                        backgroundColor: Colors.grey[300],
-                        child: Text(ownerName.isNotEmpty ? ownerName[0].toUpperCase() : 'U', style: const TextStyle(fontSize: 10)),
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(color: const Color(0xFF2E7D32).withOpacity(0.1), shape: BoxShape.circle),
+                        alignment: Alignment.center,
+                        child: Text(ownerName.isNotEmpty ? ownerName[0].toUpperCase() : 'U', 
+                          style: const TextStyle(fontSize: 10, color: Color(0xFF2E7D32), fontWeight: FontWeight.bold)),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
                       Text(
                         ownerName,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                       ),
                       if (isVerified) ...[
                          const SizedBox(width: 4),
-                         const VerifiedBadge(size: 14),
+                         const Icon(Icons.verified, size: 14, color: Color(0xFF2E7D32)),
                       ],
                       const Spacer(),
                       Text(
-                        _timeAgo(listing.createdAt),
-                        style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                        _timeAgo(listing.createdAt).toUpperCase(),
+                        style: TextStyle(fontSize: 10, color: Colors.grey[400], fontWeight: FontWeight.bold, letterSpacing: 0.5),
                       ),
                     ],
                   ),

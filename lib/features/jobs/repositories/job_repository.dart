@@ -8,40 +8,32 @@ class JobRepository {
 
   JobRepository(this._client);
 
-  // ─── Create ──────────────────────────────────────
-  // ─── Create ──────────────────────────────────────
-  Future<String> createJob(Job job) async {
-    final data = job.toMap();
-    // data['created_at'] is already set by toMap. 
-    
-    // 1. Create the Job
-    final response = await _client.from('jobs').insert(data).select().single();
-    final jobId = response['id'] as String;
-
-    // 2. Lock the Listing (Set status to 'pending' so it disappears from feed)
-    // This prevents other haulers from booking it simultaneously.
-    await _client.from('listings').update({
-      'status': 'pending', 
-      'updated_at': DateTime.now().toIso8601String()
-    }).eq('id', job.listingId);
-
-    return jobId;
+  // ─── Create (Atomic Booking) ───────────────────
+  Future<String> bookListing(String listingId) async {
+    try {
+      final response = await _client.rpc('book_listing', params: {
+        'p_listing_id': listingId,
+      });
+      return response as String; // Returns the new Job ID
+    } catch (e) {
+      throw Exception('Failed to book listing: $e');
+    }
   }
 
   // ─── Read ────────────────────────────────────────
-  // ─── Read ────────────────────────────────────────
   Stream<List<Job>> fetchAvailableJobs() {
     return _client
-        .from('jobs_view')
+        .from('jobs')
         .stream(primaryKey: ['id'])
-        .eq('status', JobStatus.open.name)
+        .eq('status', JobStatus.pending.name)
+        .isFilter('hauler_uid', null)
         .order('created_at', ascending: false)
         .map((data) => data.map((json) => Job.fromMap(json, json['id'] as String)).toList());
   }
 
   Stream<List<Job>> fetchHaulerJobs(String haulerUid) {
     return _client
-        .from('jobs_view')
+        .from('jobs')
         .stream(primaryKey: ['id'])
         .eq('hauler_uid', haulerUid)
         .order('created_at', ascending: false)
@@ -50,7 +42,7 @@ class JobRepository {
 
   Stream<List<Job>> fetchHostJobs(String hostUid) {
     return _client
-        .from('jobs_view')
+        .from('jobs')
         .stream(primaryKey: ['id'])
         .eq('host_uid', hostUid)
         .order('created_at', ascending: false)
@@ -59,7 +51,7 @@ class JobRepository {
 
   Stream<Job?> watchJob(String jobId) {
     return _client
-        .from('jobs_view')
+        .from('jobs')
         .stream(primaryKey: ['id'])
         .eq('id', jobId)
         .map((data) {
@@ -78,14 +70,15 @@ class JobRepository {
     return data?['id'] as String?;
   }
 
-  // ─── Status Transitions ──────────────────────────
-  Future<void> acceptJob(String jobId, String haulerUid, String haulerName) async {
-    await _client.from('jobs').update({
-      'hauler_uid': haulerUid,
-      'hauler_name': haulerName,
-      'status': JobStatus.assigned.name,
-      'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', jobId);
+  // ─── Status Transitions (Atomic Acceptance) ─────
+  Future<void> acceptJob(String jobId) async {
+    try {
+      await _client.rpc('accept_job_gig', params: {
+        'p_job_id': jobId,
+      });
+    } catch (e) {
+      throw Exception('Failed to accept gig: $e');
+    }
   }
 
   Future<void> updateJobStatus(String jobId, JobStatus status) async {
@@ -97,8 +90,8 @@ class JobRepository {
 
   Future<void> cancelJob(String jobId) async {
     // 1. Fetch job to get listing_id
-    final jobs = await _client.from('jobs').select('listing_id').eq('id', jobId).maybeSingle();
-    final listingId = jobs?['listing_id'] as String?;
+    final data = await _client.from('jobs').select('listing_id').eq('id', jobId).maybeSingle();
+    final listingId = data?['listing_id'] as String?;
 
     // 2. Cancel Job
     await updateJobStatus(jobId, JobStatus.cancelled);
