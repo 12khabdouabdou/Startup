@@ -11,21 +11,25 @@ class JobRepository {
   // ─── Create ──────────────────────────────────────
   // ─── Create ──────────────────────────────────────
   Future<String> createJob(Job job) async {
-    final data = job.toMap();
-    // data['created_at'] is already set by toMap. 
-    
-    // 1. Create the Job
-    final response = await _client.from('jobs').insert(data).select().single();
-    final jobId = response['id'] as String;
+    // Call RPC for atomic creation
+    // This ensures the listing is locked (status -> pending) in the same transaction
+    final params = {
+      'p_listing_id': job.listingId,
+      'p_host_uid': job.hostUid,
+      'p_material': job.material,
+      'p_quantity': job.quantity,
+      'p_price_offer': job.priceOffer ?? 0,
+      'p_pickup_lat': job.pickupLocation.latitude,
+      'p_pickup_lng': job.pickupLocation.longitude,
+      'p_dropoff_lat': job.dropoffLocation.latitude,
+      'p_dropoff_lng': job.dropoffLocation.longitude,
+      'p_pickup_address': job.pickupAddress,
+      'p_dropoff_address': job.dropoffAddress,
+      'p_notes': job.notes,
+    };
 
-    // 2. Lock the Listing (Set status to 'pending' so it disappears from feed)
-    // This prevents other haulers from booking it simultaneously.
-    await _client.from('listings').update({
-      'status': 'pending', 
-      'updated_at': DateTime.now().toIso8601String()
-    }).eq('id', job.listingId);
-
-    return jobId;
+    final jobId = await _client.rpc('create_job_and_lock_listing', params: params);
+    return jobId as String;
   }
 
   // ─── Read ────────────────────────────────────────
@@ -80,12 +84,19 @@ class JobRepository {
 
   // ─── Status Transitions ──────────────────────────
   Future<void> acceptJob(String jobId, String haulerUid, String haulerName) async {
-    await _client.from('jobs').update({
+    final response = await _client.from('jobs').update({
       'hauler_uid': haulerUid,
       'hauler_name': haulerName,
       'status': JobStatus.assigned.name,
       'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', jobId);
+    })
+    .eq('id', jobId)
+    .filter('hauler_uid', 'is', null) // Critical: Ensure nobody else took it
+    .select();
+
+    if (response.isEmpty) {
+      throw Exception('Job is no longer available (already taken).');
+    }
   }
 
   Future<void> updateJobStatus(String jobId, JobStatus status) async {

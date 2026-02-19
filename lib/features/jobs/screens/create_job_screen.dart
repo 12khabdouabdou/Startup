@@ -7,6 +7,8 @@ import '../../listings/repositories/listing_repository.dart';
 import '../../listings/models/listing_model.dart';
 import '../../auth/repositories/auth_repository.dart';
 import '../../../core/models/geo_point.dart';
+import '../../../core/models/app_user.dart';
+import '../../profile/providers/profile_provider.dart';
 import '../../maps/screens/location_picker_screen.dart';
 
 class CreateJobScreen extends ConsumerStatefulWidget {
@@ -84,6 +86,13 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Security Check: Only approved users can post jobs
+    final userDoc = ref.read(userDocProvider).valueOrNull;
+    if (userDoc?.status != UserStatus.approved) {
+       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account not approved. Cannot post jobs.')));
+       return;
+    }
     
     // Enforce Map Selection
     if (_dropoffLocation == null) {

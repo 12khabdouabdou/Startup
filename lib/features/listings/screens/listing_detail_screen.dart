@@ -6,7 +6,7 @@ import '../repositories/listing_repository.dart';
 import '../../auth/repositories/auth_repository.dart';
 // Job & User imports
 import '../../jobs/repositories/job_repository.dart';
-import '../../jobs/models/job_model.dart';
+
 import '../../profile/providers/profile_provider.dart'; // for userDocProvider
 import '../../../core/models/app_user.dart';
 import '../../messaging/repositories/chat_repository.dart';
@@ -43,27 +43,33 @@ class ListingDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Listing Details'),
       ),
-      body: listing == null
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.info_outline, size: 48, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Listing ID: $listingId',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Full detail view coming soon.\nFetch by ID will be implemented in next iteration.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                  ),
-                ],
-              ),
-            )
-          : SingleChildScrollView(
+      body: Builder(
+        builder: (context) {
+          final asyncListing = ref.watch(listingByIdProvider(listingId));
+          final fetchedListing = asyncListing.valueOrNull;
+          final displayListing = listing ?? fetchedListing;
+
+          if (displayListing == null) {
+             if (asyncListing.isLoading) return const Center(child: CircularProgressIndicator());
+             if (asyncListing.hasError) return Center(child: Text('Error: ${asyncListing.error}'));
+             return const Center(child: Text('Listing not found'));
+          }
+
+          // We have a listing to display!
+          // But we need to update the logic below to use 'displayListing' instead of 'listing'
+          // Since the rest of the file uses 'listing', we can just reassign or wrap the content in a method.
+          // Wrapping in method is cleaner but requires large diff.
+          // Or just use local variable shielding? No, 'listing' is final field.
+          
+          return _buildListingContent(context, ref, displayListing);
+        }
+      ),
+
+    );
+  }
+
+  Widget _buildListingContent(BuildContext context, WidgetRef ref, Listing listing) {
+    return SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,7 +94,7 @@ class ListingDetailScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: (listing.type == ListingType.offering ? Colors.green : Colors.orange).withOpacity(0.15),
+                      color: (listing.type == ListingType.offering ? Colors.green : Colors.orange).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -289,7 +295,6 @@ class ListingDetailScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-            ),
-    );
+            );
   }
 }

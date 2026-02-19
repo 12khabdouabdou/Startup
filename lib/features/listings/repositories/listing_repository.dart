@@ -21,7 +21,8 @@ class ListingRepository {
     // Listing.toMap needs to be updated to return lat/long or PostGIS geometry.
     // We will assume the model update handles this.
     
-    await _client.from('listings').insert(data);
+    await _client.from('listings').insert(data).select().single();
+    // Could capture ID here? The method returns void though.
   }
 
   // Read: Stream of active listings
@@ -29,7 +30,7 @@ class ListingRepository {
     return _client
         .from('listings_view')
         .stream(primaryKey: ['id'])
-        .eq('status', 'active')
+        .eq('status', ListingStatus.active.name) // Using enum name
         // Fix: Use snake_case created_at
         .order('created_at', ascending: false)
         .map((data) {
@@ -59,13 +60,18 @@ class ListingRepository {
 
   // Delete (Archive)
   Future<void> archiveListing(String id) async {
-    await updateListing(id, {'status': 'archived'});
+    await updateListing(id, {'status': ListingStatus.archived.name}); // Use enum name
   }
 
   // Read: Single listing
   Future<Listing?> fetchListing(String id) async {
     try {
-      final data = await _client.from('listings_view').select().eq('id', id).maybeSingle();
+      final data = await _client
+          .from('listings_view')
+          .select()
+          .eq('id', id)
+          .maybeSingle();
+      
       if (data == null) return null;
       return Listing.fromMap(data, id);
     } catch (e) {
@@ -87,4 +93,8 @@ final myListingsProvider = StreamProvider.autoDispose<List<Listing>>((ref) {
   final user = ref.watch(authRepositoryProvider).currentUser;
   if (user == null) return const Stream.empty();
   return ref.watch(listingRepositoryProvider).fetchUserListings(user.id);
+});
+
+final listingByIdProvider = FutureProvider.autoDispose.family<Listing?, String>((ref, id) async {
+  return ref.watch(listingRepositoryProvider).fetchListing(id);
 });

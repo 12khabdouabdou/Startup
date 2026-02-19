@@ -284,7 +284,7 @@ class _ActiveJobMapState extends ConsumerState<_ActiveJobMap> {
                   Polyline(
                     points: [pickup, dropoff],
                     strokeWidth: 4.0,
-                    color: Colors.grey.withOpacity(0.5),
+                    color: Colors.grey.withValues(alpha: 0.5),
                     pattern: const StrokePattern.dotted(),
                   ),
                 ],
@@ -383,6 +383,15 @@ class _JobBrowserMap extends ConsumerWidget {
                    try {
                      final user = ref.read(authRepositoryProvider).currentUser!;
                      final profile = ref.read(userDocProvider).valueOrNull;
+
+                     if (profile?.status != UserStatus.approved) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Account not approved. Cannot accept jobs.')),
+                          );
+                        }
+                        return;
+                     }
                      await ref.read(jobRepositoryProvider).acceptJob(job.id, user.id, profile?.displayName ?? 'Hauler');
                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Accepted!')));
                      // Map will auto-update because activeJobProvider streams update
@@ -464,10 +473,24 @@ class _ListingBrowserMap extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final listingsAsync = ref.watch(activeListingsProvider);
+    final userDoc = ref.watch(userDocProvider).valueOrNull;
 
     return listingsAsync.when(
       data: (listings) {
-        final located = listings.where((l) => l.location != null).toList();
+        // Filter based on role to match HomeScreen
+        // Excavator (Has dirt) -> Wants to see Needing (Orange)
+        // Developer (Needs dirt) -> Wants to see Offering (Green)
+        // If role is undefined or other, maybe show all?
+        // Let's assume strict filtering if role is known.
+        
+        var filtered = listings;
+        if (userDoc?.role == UserRole.excavator) {
+           filtered = listings.where((l) => l.type == ListingType.needing).toList();
+        } else if (userDoc?.role == UserRole.developer) {
+           filtered = listings.where((l) => l.type == ListingType.offering).toList();
+        }
+
+        final located = filtered.where((l) => l.location != null).toList();
         
         return FlutterMap(
           mapController: mapController,
