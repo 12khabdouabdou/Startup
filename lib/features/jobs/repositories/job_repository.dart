@@ -13,16 +13,20 @@ class JobRepository {
   Future<String> createJob(Job job) async {
     // Call RPC for atomic creation
     // This ensures the listing is locked (status -> pending) in the same transaction
+    if (job.pickupLocation == null || job.dropoffLocation == null) {
+      throw Exception('Job must have valid pickup and dropoff locations.');
+    }
+
     final params = {
       'p_listing_id': job.listingId,
       'p_host_uid': job.hostUid,
       'p_material': job.material,
       'p_quantity': job.quantity,
       'p_price_offer': job.priceOffer ?? 0,
-      'p_pickup_lat': job.pickupLocation.latitude,
-      'p_pickup_lng': job.pickupLocation.longitude,
-      'p_dropoff_lat': job.dropoffLocation.latitude,
-      'p_dropoff_lng': job.dropoffLocation.longitude,
+      'p_pickup_lat': job.pickupLocation!.latitude,
+      'p_pickup_lng': job.pickupLocation!.longitude,
+      'p_dropoff_lat': job.dropoffLocation!.latitude,
+      'p_dropoff_lng': job.dropoffLocation!.longitude,
       'p_pickup_address': job.pickupAddress,
       'p_dropoff_address': job.dropoffAddress,
       'p_notes': job.notes,
