@@ -17,6 +17,17 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  // ListingType? _typeFilter; // Removed type filter
+  FillMaterial? _materialFilter;
+  String _searchQuery = '';
+  final _searchController = TextEditingController();
+  bool _showSearch = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     final listingsAsync = ref.watch(activeListingsProvider);
