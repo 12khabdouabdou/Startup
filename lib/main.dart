@@ -7,7 +7,6 @@ import 'core/services/push_notification_service.dart';
 
 import 'app.dart';
 import 'core/services/offline_queue.dart';
-import 'core/services/notification_service.dart';
 import 'core/models/mock_data.dart';
 import 'core/providers/auth_provider.dart';
 import 'features/profile/providers/profile_provider.dart';
