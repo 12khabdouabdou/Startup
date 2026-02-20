@@ -477,18 +477,8 @@ class _ListingBrowserMap extends ConsumerWidget {
 
     return listingsAsync.when(
       data: (listings) {
-        // Filter based on role to match HomeScreen
-        // Excavator (Has dirt) -> Wants to see Needing (Orange)
-        // Developer (Needs dirt) -> Wants to see Offering (Green)
-        // If role is undefined or other, maybe show all?
-        // Let's assume strict filtering if role is known.
-        
+        // We now show all active listings so users can discover everything.
         var filtered = listings;
-        if (userDoc?.role == UserRole.excavator) {
-           filtered = listings.where((l) => l.type == ListingType.needing).toList();
-        } else if (userDoc?.role == UserRole.developer) {
-           filtered = listings.where((l) => l.type == ListingType.offering).toList();
-        }
 
         final located = filtered.where((l) => l.location != null).toList();
         
