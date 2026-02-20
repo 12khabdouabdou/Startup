@@ -119,6 +119,7 @@ class Listing {
                } catch (_) {}
              }
          }
+      }
     }
 
     return Listing(
