@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'core/services/push_notification_service.dart';
 
 import 'app.dart';
 import 'core/services/offline_queue.dart';
@@ -55,7 +57,14 @@ void main() async {
       ),
     );
     
-    // Notification service initialization removed for now as it depended on Firebase Messaging
-    // container.read(notificationServiceProvider).initialize()...
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp();
+      }
+      // Initialize Push Notifications if Firebase is ready
+      container.read(pushNotificationServiceProvider).initialize();
+    } catch (e) {
+      debugPrint('Warning: Firebase or Push Notifications failure: $e');
+    }
   }
 }

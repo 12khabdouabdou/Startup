@@ -40,14 +40,26 @@ import '../../features/messaging/screens/chat_list_screen.dart';
 import '../../features/messaging/screens/chat_screen.dart';
 import '../../features/profile/providers/profile_provider.dart';
 import '../models/app_user.dart';
+import '../services/location_service.dart';
 
-/// Notifier to refresh router when auth or profile state changes
+/// Notifier to refresh router when auth or profile state changes.
+/// Also triggers location sync when a user is approved (for geo-fencing).
 class AuthNotifier extends ChangeNotifier {
   final Ref ref;
 
   AuthNotifier(this.ref) {
     ref.listen<AsyncValue<User?>>(authStateProvider, (_, _a) => notifyListeners());
-    ref.listen<AsyncValue<AppUser?>>(userDocProvider, (_, _b) => notifyListeners());
+    ref.listen<AsyncValue<AppUser?>>(userDocProvider, (prev, next) {
+      notifyListeners();
+      // When user transitions to 'approved', sync their location for Geo-Fencing (Story 5.1)
+      final user = next.valueOrNull;
+      if (user != null && user.status == UserStatus.approved) {
+        final uid = ref.read(authStateProvider).valueOrNull?.id;
+        if (uid != null) {
+          ref.read(locationServiceProvider).updateUserLocation(uid);
+        }
+      }
+    });
   }
 }
 

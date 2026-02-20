@@ -88,18 +88,14 @@ class JobRepository {
 
   // ─── Status Transitions ──────────────────────────
   Future<void> acceptJob(String jobId, String haulerUid, String haulerName) async {
-    final response = await _client.from('jobs').update({
-      'hauler_uid': haulerUid,
-      'hauler_name': haulerName,
-      'status': JobStatus.assigned.name,
-      'updated_at': DateTime.now().toIso8601String(),
-    })
-    .eq('id', jobId)
-    .filter('hauler_uid', 'is', null) // Critical: Ensure nobody else took it
-    .select();
-
-    if (response.isEmpty) {
-      throw Exception('Job is no longer available (already taken).');
+    // 1. Call Atomic RPC (handles race conditions + RLS bypass)
+    // Note: haulerUid/Name params are ignored as RPC uses auth.uid() source of truth
+    try {
+      await _client.rpc('claim_job', params: {'p_job_id': jobId});
+    } on PostgrestException catch (e) {
+      throw Exception(e.message); // Propagate SQL error (e.g. 'Job not available')
+    } catch (e) {
+      throw Exception('Failed to claim job: $e');
     }
   }
 

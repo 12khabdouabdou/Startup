@@ -3,10 +3,17 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../jobs/models/job_model.dart';
 
 /// Generates a professional digital manifest PDF for a completed job.
+/// Also uploads the generated PDF to Supabase Storage for audit trails.
 class ManifestService {
+  final SupabaseClient _supabase;
+  ManifestService(this._supabase);
+  
+  static const String _bucket = 'manifests';
+
   /// Generate manifest PDF bytes for a completed job.
   Future<Uint8List> generateManifest({
     required Job job,
@@ -135,7 +142,31 @@ class ManifestService {
       ),
     );
 
-    return pdf.save();
+    final bytes = await pdf.save();
+
+    // Upload to Supabase Storage for audit trail (Story 6.1)
+    await _uploadToStorage(jobId: job.id, bytes: bytes);
+
+    return bytes;
+  }
+
+  /// Uploads the PDF to the 'manifests' bucket and returns a signed URL.
+  /// Returns null silently on failure (PDF is still usable locally).
+  Future<String?> _uploadToStorage({required String jobId, required Uint8List bytes}) async {
+    try {
+      final path = 'manifests/$jobId.pdf';
+      await _supabase.storage.from(_bucket).uploadBinary(
+        path,
+        bytes,
+        fileOptions: const FileOptions(contentType: 'application/pdf', upsert: true),
+      );
+      // Generate a signed URL valid for 1 year (for sharing/archival)
+      final signedUrl = await _supabase.storage.from(_bucket).createSignedUrl(path, 60 * 60 * 24 * 365);
+      return signedUrl;
+    } catch (e) {
+      // Non-fatal: local PDF still works even if upload fails
+      return null;
+    }
   }
 
   // ─── Helper Widgets ──────────────────────────────────
@@ -172,5 +203,5 @@ class ManifestService {
 // ─── Provider ──────────────────────────────────────────
 
 final manifestServiceProvider = Provider<ManifestService>((ref) {
-  return ManifestService();
+  return ManifestService(Supabase.instance.client);
 });

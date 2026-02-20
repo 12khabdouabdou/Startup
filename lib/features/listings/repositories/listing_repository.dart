@@ -48,7 +48,6 @@ class ListingRepository {
         .map((data) {
           return data
               .map((json) => Listing.fromMap(json, json['id'] as String))
-              .where((listing) => listing.status != ListingStatus.archived)
               .toList();
         });
   }

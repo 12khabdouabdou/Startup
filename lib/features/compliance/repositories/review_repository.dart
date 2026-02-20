@@ -50,18 +50,11 @@ class ReviewRepository {
   final SupabaseClient _client;
   ReviewRepository(this._client);
 
-  /// Submit a review after a completed job
+  /// Submit a review after a completed job.
+  /// Rating aggregation is handled automatically by a database trigger
+  /// (trg_update_user_rating) — no client-side calculation needed.
   Future<void> submitReview(Review review) async {
-    // Save review
-    await _client.from('reviews').insert({
-      ...review.toMap(),
-      // 'created_at' is already in toMap() if we constructed it correctly, 
-      // but to ensure server timestamp we can rely on default or send it.
-      // review.toMap() has it.
-    });
-
-    // Update the reviewee's aggregate rating
-    await _updateUserRating(review.revieweeUid);
+    await _client.from('reviews').insert(review.toMap());
   }
 
   /// Fetch reviews for a user
@@ -83,27 +76,6 @@ class ReviewRepository {
         .eq('reviewer_uid', reviewerUid)
         .limit(1);
     return (data as List).isNotEmpty;
-  }
-
-  /// Recalculate and store aggregate rating on user document
-  Future<void> _updateUserRating(String uid) async {
-    final reviews = await _client
-        .from('reviews')
-        .select() // Selects all fields
-        .eq('reviewee_uid', uid);
-
-    if ((reviews as List).isEmpty) return;
-
-    double total = 0;
-    for (var doc in reviews) {
-      total += (doc['rating'] as num?)?.toDouble() ?? 0;
-    }
-    final avg = total / reviews.length;
-
-    await _client.from('users').update({
-      'average_rating': avg,
-      'total_reviews': reviews.length,
-    }).eq('uid', uid);
   }
 }
 

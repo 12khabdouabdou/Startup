@@ -1,8 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/logger.dart';
 
 class LocationService {
+  final SupabaseClient _supabase;
+
+  LocationService(this._supabase);
+
   Future<bool> requestPermission() async {
     bool serviceEnabled;
     LocationPermission permission;
@@ -10,7 +15,7 @@ class LocationService {
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       log.w('[LOCATION] Service is disabled');
-      return false; // Could open settings: await Geolocator.openLocationSettings();
+      return false; 
     }
 
     permission = await Geolocator.checkPermission();
@@ -25,7 +30,7 @@ class LocationService {
 
     if (permission == LocationPermission.deniedForever) {
       log.e('[LOCATION] Permission denied forever');
-      return false; // Could open settings: await Geolocator.openAppSettings();
+      return false;
     }
 
     return true;
@@ -46,9 +51,29 @@ class LocationService {
     }
   }
 
+  /// Updates the user's location in the database (Story 5.1)
+  /// This enables Geo-Fenced "New Dirt Alerts".
+  Future<void> updateUserLocation(String uid) async {
+    final position = await getCurrentPosition();
+    if (position == null) return;
+
+    try {
+      // Use GeoJSON format for PostGIS
+      await _supabase.from('users').update({
+        'location': {
+          'type': 'Point',
+          'coordinates': [position.longitude, position.latitude]
+        },
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('uid', uid);
+      
+      log.i('[LOCATION] User location updated in DB: [${position.longitude}, ${position.latitude}]');
+    } catch (e) {
+      log.e('[LOCATION] Failed to update user location: $e');
+    }
+  }
+
   Stream<Position> getPositionStream() {
-    log.i('[LOCATION] Starting position stream');
-    // Assuming permission checked or check here
     return Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
@@ -58,14 +83,12 @@ class LocationService {
   }
 
   double distanceBetween(Position a, Position b) {
-    final distance = Geolocator.distanceBetween(
+    return Geolocator.distanceBetween(
       a.latitude, a.longitude, b.latitude, b.longitude,
     );
-    // log.d('[LOCATION] Distance: $distance meters');
-    return distance;
   }
 }
 
 final locationServiceProvider = Provider<LocationService>((ref) {
-  return LocationService();
+  return LocationService(Supabase.instance.client);
 });
