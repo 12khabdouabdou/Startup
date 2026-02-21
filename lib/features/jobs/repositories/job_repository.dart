@@ -100,10 +100,31 @@ class JobRepository {
   }
 
   Future<void> updateJobStatus(String jobId, JobStatus status) async {
-    await _client.from('jobs').update({
+    final now = DateTime.now().toIso8601String();
+    String? timestampCol;
+
+    switch (status) {
+      case JobStatus.assigned: timestampCol = 'assigned_at'; break;
+      case JobStatus.enRoute: timestampCol = 'en_route_at'; break;
+      case JobStatus.atPickup: timestampCol = 'arrived_pickup_at'; break;
+      case JobStatus.loaded: timestampCol = 'loaded_at'; break;
+      case JobStatus.inTransit: timestampCol = 'in_transit_at'; break;
+      case JobStatus.atDropoff: timestampCol = 'arrived_dropoff_at'; break;
+      case JobStatus.completed: timestampCol = 'completed_at'; break;
+      case JobStatus.cancelled: timestampCol = 'cancelled_at'; break;
+      default: break;
+    }
+
+    final updateData = <String, dynamic>{
       'status': status.name,
-      'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', jobId);
+      'updated_at': now,
+    };
+
+    if (timestampCol != null) {
+      updateData[timestampCol] = now;
+    }
+
+    await _client.from('jobs').update(updateData).eq('id', jobId);
   }
 
   Future<void> cancelJob(String jobId) async {
@@ -129,6 +150,7 @@ class JobRepository {
       'pickup_photo_url': photoUrl,
       'status': JobStatus.loaded.name,
       'updated_at': DateTime.now().toIso8601String(),
+      'loaded_at': DateTime.now().toIso8601String(),
     }).eq('id', jobId);
   }
 
@@ -137,6 +159,7 @@ class JobRepository {
       'dropoff_photo_url': photoUrl,
       'status': JobStatus.completed.name,
       'updated_at': DateTime.now().toIso8601String(),
+      'completed_at': DateTime.now().toIso8601String(),
     }).eq('id', jobId);
   }
 }

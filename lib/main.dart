@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'core/services/push_notification_service.dart';
+import 'core/services/connectivity_service.dart';
 
 import 'app.dart';
 import 'core/services/offline_queue.dart';
@@ -65,5 +66,16 @@ void main() async {
     } catch (e) {
       debugPrint('Warning: Firebase or Push Notifications failure: $e');
     }
+
+    // Wire connectivity → offline queue sync-on-reconnect
+    // When device comes back online, flush any queued photo uploads automatically.
+    container.read(connectivityServiceProvider).statusStream.listen((status) {
+      if (status != ConnectivityStatus.offline) {
+        debugPrint('[CONNECTIVITY] Back online — flushing offline queue...');
+        container.read(offlineQueueProvider).syncAll().catchError((e) {
+          debugPrint('[QUEUE] syncAll error: $e');
+        });
+      }
+    });
   }
 }

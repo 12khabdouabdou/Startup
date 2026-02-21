@@ -7,11 +7,19 @@ import '../repositories/job_repository.dart';
 import '../../listings/repositories/listing_repository.dart';
 import '../../auth/repositories/auth_repository.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/services/offline_queue.dart';
+import '../../../core/services/connectivity_service.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../../messaging/repositories/chat_repository.dart';
 import '../../../core/models/app_user.dart';
 import '../../maps/widgets/job_route_map.dart';
-import 'package:url_launcher/url_launcher.dart'; // Added for external nav
+import 'package:url_launcher/url_launcher.dart';
+import '../../../core/widgets/status_stepper.dart';
+import '../../../core/services/location_service.dart';
+import 'package:geolocator/geolocator.dart';
+import 'dart:io';
+import 'package:image/image.dart' as img;
+import 'package:intl/intl.dart';
 
 class JobDetailScreen extends ConsumerStatefulWidget {
   final String jobId;
@@ -74,7 +82,50 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   }
 
   Future<void> _advanceStatus(Job job, JobStatus nextStatus) async {
-    setState(() => _isLoading = true);
+    if (nextStatus == JobStatus.atPickup || nextStatus == JobStatus.atDropoff) {
+      setState(() => _isLoading = true);
+      try {
+        final locService = ref.read(locationServiceProvider);
+        final currentPos = await locService.getCurrentPosition();
+        if (currentPos != null) {
+          final targetLoc = nextStatus == JobStatus.atPickup 
+              ? job.pickupLocation 
+              : job.dropoffLocation;
+          
+          if (targetLoc != null) {
+            final distance = Geolocator.distanceBetween(
+              currentPos.latitude,
+              currentPos.longitude,
+              targetLoc.latitude,
+              targetLoc.longitude,
+            );
+            
+            if (distance > 500) {
+              if (mounted) setState(() => _isLoading = false);
+              final targetName = nextStatus == JobStatus.atPickup ? "pickup" : "dropoff";
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Location Verification'),
+                  content: Text("You don't seem to be at the $targetName location. Confirm arrival anyway?"),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
+                    TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes')),
+                  ],
+                ),
+              );
+              if (confirm != true) {
+                return; // Abort status update
+              }
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Location check error: $e');
+      }
+    }
+
+    if (mounted) setState(() => _isLoading = true);
     try {
       await ref.read(jobRepositoryProvider).updateJobStatus(job.id, nextStatus);
       ref.invalidate(_jobStreamProvider(widget.jobId));
@@ -91,14 +142,135 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     if (photo == null) return;
 
     setState(() => _isLoading = true);
+    
     try {
-      final storage = ref.read(storageServiceProvider);
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final label = isPickup ? 'pickup' : 'dropoff';
-      final remotePath = 'jobs/${job.id}/${timestamp}_$label.jpg';
+      // 1. Get GPS coordinates
+      final locService = ref.read(locationServiceProvider);
+      final position = await locService.getCurrentPosition();
+      final lat = position?.latitude.toStringAsFixed(5) ?? 'Unknown';
+      final lng = position?.longitude.toStringAsFixed(5) ?? 'Unknown';
+      
+      // 2. Compress image (1280px max width, 80% jpeg rating)
+      final bytes = await File(photo.path).readAsBytes();
+      final decodedImage = img.decodeImage(bytes);
+      
+      if (decodedImage == null) throw Exception('Could not decode image');
+      
+      var workingImage = decodedImage;
+      if (workingImage.width > 1280) {
+        workingImage = img.copyResize(workingImage, width: 1280);
+      }
+      
+      final compressedBytes = img.encodeJpg(workingImage, quality: 80);
+      final compressedFile = File(photo.path)..writeAsBytesSync(compressedBytes);
 
-      final url = await storage.uploadFile(localPath: photo.path, remotePath: remotePath);
-      if (url == null) throw Exception('Upload failed');
+      // 3. Show Verification Preview
+      if (mounted) setState(() => _isLoading = false);
+      
+      final timestamp = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
+      
+      final confirm = await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('Verification Preview', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(
+                     alignment: Alignment.bottomLeft,
+                     children: [
+                        Image.file(compressedFile, height: 300, width: double.infinity, fit: BoxFit.cover),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          color: Colors.black54,
+                          width: double.infinity,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('🕒 $timestamp', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                              Text('📍 $lat, $lng', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                            ],
+                          ),
+                        )
+                     ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(vertical: 16)),
+                  child: const Text('Confirm & Continue', style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Retake'),
+                )
+              ],
+            ),
+          ),
+        ),
+      );
+      
+      if (confirm != true) return; // User cancelled or chose to retake
+
+      // 4. Check connectivity — queue offline if no network
+      if (mounted) setState(() => _isLoading = true);
+
+      final epoch = DateTime.now().millisecondsSinceEpoch;
+      final label = isPickup ? 'pickup' : 'dropoff';
+      final remotePath = 'jobs/${job.id}/${epoch}_$label.jpg';
+
+      final connectivityStatus = await ref.read(connectivityServiceProvider).checkStatus();
+      if (connectivityStatus == ConnectivityStatus.offline) {
+        // Queue for later upload when connectivity returns
+        await ref.read(offlineQueueProvider).enqueuePhotoUpload(
+          jobId: job.id,
+          localPath: compressedFile.path,
+          remotePath: remotePath,
+          isPickup: isPickup,
+        );
+        if (mounted) setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('📶 Offline — photo saved. It will upload when you reconnect.'),
+              duration: Duration(seconds: 4),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      // 5. Online — proceed with immediate upload
+      final storage = ref.read(storageServiceProvider);
+      final url = await storage.uploadFile(localPath: compressedFile.path, remotePath: remotePath);
+
+      if (url == null) {
+        // Upload returned null despite being online — queue as fallback
+        await ref.read(offlineQueueProvider).enqueuePhotoUpload(
+          jobId: job.id,
+          localPath: compressedFile.path,
+          remotePath: remotePath,
+          isPickup: isPickup,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Upload failed — photo queued and will retry automatically.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
 
       final repo = ref.read(jobRepositoryProvider);
       if (isPickup) {
@@ -152,6 +324,8 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _StatusBanner(status: job.status),
+                const SizedBox(height: 16),
+                JobStatusStepper(currentStatus: job.status),
                 const SizedBox(height: 24),
 
                 if (job.pickupLocation != null && job.dropoffLocation != null) ...[
@@ -234,7 +408,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
               title: const Text('Google Maps'),
               onTap: () {
                 Navigator.pop(context);
-                launchUrl(Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng'), mode: LaunchMode.externalApplication);
+                launchUrl(Uri.parse('google.navigation:q=$lat,$lng&mode=d'), mode: LaunchMode.externalApplication);
               },
             ),
             ListTile(
