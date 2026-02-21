@@ -189,6 +189,9 @@ class _JobRequestTile extends ConsumerWidget {
                     user.uid, 
                     user.companyName ?? user.displayName ?? 'Hauler'
                   );
+                  // Refresh job lists immediately
+                  ref.invalidate(availableJobsProvider);
+                  ref.invalidate(myActiveJobProvider);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Accepted!')));
                   }

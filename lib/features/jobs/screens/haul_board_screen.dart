@@ -114,6 +114,8 @@ class HaulBoardScreen extends ConsumerWidget {
                     (user.userMetadata?['display_name'] as String?) ?? 
                     'Hauler'
                   );
+                  ref.invalidate(availableJobsProvider);
+                  ref.invalidate(myActiveJobProvider);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Accepted! check Activity tab.')));
                   }

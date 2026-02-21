@@ -23,8 +23,10 @@ class MapScreen extends ConsumerStatefulWidget {
 
 class _MapScreenState extends ConsumerState<MapScreen> {
   final MapController _mapController = MapController();
-  LatLng _currentCenter = const LatLng(37.7749, -122.4194);
+  LatLng _currentCenter = const LatLng(36.75, 3.05); // Default: Algiers
   bool _hasLocation = false;
+  bool _isLocating = true;
+  bool _mapReady = false;
 
   @override
   void initState() {
@@ -33,32 +35,61 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   Future<void> _determinePosition() async {
-    bool serviceEnabled;
-    LocationPermission permission;
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) setState(() => _isLocating = false);
+        return;
+      }
 
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) setState(() => _isLocating = false);
+          return;
+        }
+      }
 
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return;
-    }
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) setState(() => _isLocating = false);
+        return;
+      }
 
-    if (permission == LocationPermission.deniedForever) return;
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
 
-    final position = await Geolocator.getCurrentPosition();
-    if (mounted) {
-      setState(() {
-        _currentCenter = LatLng(position.latitude, position.longitude);
-        _hasLocation = true;
-      });
-      _mapController.move(_currentCenter, 12.0);
+      if (mounted) {
+        setState(() {
+          _currentCenter = LatLng(position.latitude, position.longitude);
+          _hasLocation = true;
+          _isLocating = false;
+        });
+        // Move only if map is already rendered
+        if (_mapReady) {
+          _mapController.move(_currentCenter, 13.0);
+        }
+      }
+    } catch (e) {
+      debugPrint('[MAP] GPS error: $e');
+      if (mounted) setState(() => _isLocating = false);
     }
   }
-  
-  void _recenter() {
+
+  void _onMapReady() {
+    _mapReady = true;
+    // If GPS resolved before map was ready, center now
     if (_hasLocation) {
+      _mapController.move(_currentCenter, 13.0);
+    }
+  }
+
+  void _recenter() {
+    if (_hasLocation && _mapReady) {
       _mapController.move(_currentCenter, 13.0);
     } else {
       _determinePosition();
@@ -70,11 +101,27 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final userAsync = ref.watch(userDocProvider);
     final activeJobAsync = ref.watch(myActiveJobProvider);
 
+    // Show a loading indicator while determining initial position
+    if (_isLocating) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text('Locating...', style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: userAsync.when(
         data: (user) {
           if (user == null) return const Center(child: Text('User not found'));
-          final isHauler = user.role == UserRole.hauler; // Or check capabilities
+          final isHauler = user.role == UserRole.hauler;
 
           return activeJobAsync.when(
             data: (activeJob) {
@@ -85,6 +132,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   mapController: _mapController,
                   currentLocation: _hasLocation ? _currentCenter : null,
                   onRecenter: _recenter,
+                  onMapReady: _onMapReady,
                 );
               }
 
@@ -94,6 +142,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   mapController: _mapController,
                   currentLocation: _hasLocation ? _currentCenter : null,
                   onRecenter: _recenter,
+                  onMapReady: _onMapReady,
                 );
               }
 
@@ -102,6 +151,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 mapController: _mapController,
                 currentLocation: _hasLocation ? _currentCenter : null,
                 onRecenter: _recenter,
+                onMapReady: _onMapReady,
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -126,12 +176,14 @@ class _ActiveJobMap extends ConsumerStatefulWidget {
   final MapController mapController;
   final LatLng? currentLocation;
   final VoidCallback onRecenter;
+  final VoidCallback onMapReady;
 
   const _ActiveJobMap({
     required this.job,
     required this.mapController,
     required this.currentLocation,
     required this.onRecenter,
+    required this.onMapReady,
   });
 
   @override
@@ -257,8 +309,9 @@ class _ActiveJobMapState extends ConsumerState<_ActiveJobMap> {
         FlutterMap(
           mapController: widget.mapController,
           options: MapOptions(
-            initialCenter: pickup ?? dropoff ?? widget.currentLocation ?? const LatLng(0,0),
+            initialCenter: pickup ?? dropoff ?? widget.currentLocation ?? const LatLng(36.75, 3.05),
             initialZoom: 13.0,
+            onMapReady: widget.onMapReady,
             interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
           ),
           children: [
@@ -355,8 +408,9 @@ class _JobBrowserMap extends ConsumerWidget {
   final MapController mapController;
   final LatLng? currentLocation;
   final VoidCallback onRecenter;
+  final VoidCallback onMapReady;
 
-  const _JobBrowserMap({required this.mapController, required this.currentLocation, required this.onRecenter});
+  const _JobBrowserMap({required this.mapController, required this.currentLocation, required this.onRecenter, required this.onMapReady});
 
   void _showJobPreview(BuildContext context, WidgetRef ref, Job job) {
     showModalBottomSheet(
@@ -393,8 +447,10 @@ class _JobBrowserMap extends ConsumerWidget {
                         return;
                      }
                      await ref.read(jobRepositoryProvider).acceptJob(job.id, user.id, profile?.displayName ?? 'Hauler');
+                     // Force refresh — stream will also update, but this is instant
+                     ref.invalidate(availableJobsProvider);
+                     ref.invalidate(myActiveJobProvider);
                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job Accepted!')));
-                     // Map will auto-update because activeJobProvider streams update
                    } catch (e) {
                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
                    }
@@ -426,8 +482,9 @@ class _JobBrowserMap extends ConsumerWidget {
         return FlutterMap(
           mapController: mapController,
           options: MapOptions(
-            initialCenter: currentLocation ?? const LatLng(0,0),
-            initialZoom: 10.0,
+            initialCenter: currentLocation ?? const LatLng(36.75, 3.05),
+            initialZoom: 12.0,
+            onMapReady: onMapReady,
             interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
           ),
           children: [
@@ -467,8 +524,9 @@ class _ListingBrowserMap extends ConsumerWidget {
   final MapController mapController;
   final LatLng? currentLocation;
   final VoidCallback onRecenter;
+  final VoidCallback onMapReady;
 
-  const _ListingBrowserMap({required this.mapController, required this.currentLocation, required this.onRecenter});
+  const _ListingBrowserMap({required this.mapController, required this.currentLocation, required this.onRecenter, required this.onMapReady});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -485,8 +543,9 @@ class _ListingBrowserMap extends ConsumerWidget {
         return FlutterMap(
           mapController: mapController,
           options: MapOptions(
-            initialCenter: currentLocation ?? const LatLng(0,0),
-            initialZoom: 10.0,
+            initialCenter: currentLocation ?? const LatLng(36.75, 3.05),
+            initialZoom: 12.0,
+            onMapReady: onMapReady,
             interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
           ),
           children: [
