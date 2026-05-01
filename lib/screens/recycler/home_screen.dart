@@ -566,7 +566,7 @@ class _ProfileTab extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    currentUser?.displayName ?? 'Recycler',
+                    currentUser?.userMetadata?['name'] ?? 'Recycler',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,

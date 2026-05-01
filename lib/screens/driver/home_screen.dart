@@ -761,7 +761,7 @@ class _ProfileTab extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    currentUser?.displayName ?? 'Driver',
+                    currentUser?.userMetadata?['name'] ?? 'Driver',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,

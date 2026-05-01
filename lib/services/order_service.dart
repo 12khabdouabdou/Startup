@@ -38,7 +38,7 @@ class OrderService {
         .from('orders')
         .select()
         .eq('assigned_driver_id', driverId)
-        .in_('status', ['confirmed', 'inProgress'])
+        .inFilter('status', ['confirmed', 'inProgress'])
         .order('scheduled_date');
 
     return response.map((data) => Order.fromJson(data)).toList();
@@ -58,8 +58,8 @@ class OrderService {
     final response = await _supabase
         .from('orders')
         .select()
-        .in_('status', ['pending', 'confirmed'])
-        .is_('assigned_driver_id', null)
+        .inFilter('status', ['pending', 'confirmed'])
+        .isFilter('assigned_driver_id', null)
         .order('scheduled_date');
 
     return response.map((data) => Order.fromJson(data)).toList();
