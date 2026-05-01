@@ -1,0 +1,7 @@
+# This file is used to configure your Flutter SDK location
+# Replace the path below with your actual Flutter SDK path
+flutter.sdk=/path/to/flutter/sdk
+
+# Optional: Uncomment and set if you want to use a specific Flutter version
+# flutter.versionName=1.0.0
+# flutter.versionCode=1
