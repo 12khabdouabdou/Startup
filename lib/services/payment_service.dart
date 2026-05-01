@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:waste_logistics/models/order.dart';
 
@@ -64,7 +65,7 @@ class PaymentService {
   Future<void> _refundPaymentBackend(String paymentId) async {
   }
 
-  Future<double> calculateServiceFee(double amount) {
+  double calculateServiceFee(double amount) {
     const double serviceFeeRate = 0.05;
     const double minimumFee = 2.0;
     final fee = amount * serviceFeeRate;
