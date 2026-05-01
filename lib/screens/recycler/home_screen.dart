@@ -3,9 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:waste_logistics/models/order.dart';
 import 'package:waste_logistics/models/user.dart';
-import 'package:waste_logistics/services/auth_service.dart';
-import 'package:waste_logistics/services/order_service.dart';
-import 'package:waste_logistics/services/recycler_service.dart';
+import 'package:waste_logistics/providers/app_providers.dart';
 import 'package:waste_logistics/theme/app_theme.dart';
 
 class RecyclerHomeScreen extends ConsumerStatefulWidget {
@@ -87,7 +85,7 @@ class _DashboardTab extends ConsumerWidget {
     }
 
     return FutureBuilder(
-      future: ref.read(recyclerServiceProvider).getRecyclerByUserId(currentUser.uid),
+      future: ref.read(recyclerServiceProvider).getRecyclerByUserId(currentUser.id),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -324,7 +322,7 @@ class _OrdersTab extends ConsumerWidget {
     }
 
     return FutureBuilder(
-      future: ref.read(recyclerServiceProvider).getRecyclerByUserId(currentUser.uid),
+      future: ref.read(recyclerServiceProvider).getRecyclerByUserId(currentUser.id),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -337,7 +335,7 @@ class _OrdersTab extends ConsumerWidget {
         }
 
         return StreamBuilder<List<Order>>(
-          stream: ref.read(orderServiceProvider).watchCustomerOrders(currentUser.uid),
+          stream: ref.read(orderServiceProvider).watchCustomerOrders(currentUser.id),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -641,6 +639,3 @@ class _ProfileMenuItem extends StatelessWidget {
   }
 }
 
-final recyclerServiceProvider = Provider<RecyclerService>((ref) {
-  return RecyclerService();
-});

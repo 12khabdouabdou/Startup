@@ -4,12 +4,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:waste_logistics/models/order.dart';
 import 'package:waste_logistics/models/user.dart';
-import 'package:waste_logistics/services/order_service.dart';
+import 'package:waste_logistics/providers/app_providers.dart';
 import 'package:waste_logistics/theme/app_theme.dart';
-
-final orderServiceProvider = Provider<OrderService>((ref) {
-  return OrderService();
-});
 
 class TrackingScreen extends ConsumerStatefulWidget {
   final String orderId;

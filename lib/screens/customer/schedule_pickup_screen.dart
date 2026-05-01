@@ -4,9 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:waste_logistics/models/order.dart';
 import 'package:waste_logistics/models/user.dart';
-import 'package:waste_logistics/services/auth_service.dart';
-import 'package:waste_logistics/services/location_service.dart';
-import 'package:waste_logistics/services/order_service.dart';
+import 'package:waste_logistics/providers/app_providers.dart';
 import 'package:waste_logistics/theme/app_theme.dart';
 
 class SchedulePickupScreen extends ConsumerStatefulWidget {
@@ -88,7 +86,7 @@ class _SchedulePickupScreenState extends ConsumerState<SchedulePickupScreen> {
       final user = authService.currentUser;
       if (user == null) throw Exception('User not logged in');
 
-      final userData = await authService.getUserData(user.uid);
+      final userData = await authService.getUserData(user.id);
       if (userData == null) throw Exception('User data not found');
 
       final estimatedPrice = await orderService.calculateEstimatedPrice(
@@ -106,7 +104,7 @@ class _SchedulePickupScreenState extends ConsumerState<SchedulePickupScreen> {
 
       final order = Order(
         id: '',
-        customerId: user.uid,
+        customerId: user.id,
         customerName: userData.name,
         customerPhone: userData.phone,
         pickupAddress: _addressController.text,
@@ -360,6 +358,3 @@ class _SchedulePickupScreenState extends ConsumerState<SchedulePickupScreen> {
   }
 }
 
-final locationServiceProvider = Provider<LocationService>((ref) {
-  return LocationService();
-});

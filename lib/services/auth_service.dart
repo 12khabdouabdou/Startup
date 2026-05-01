@@ -57,7 +57,7 @@ class AuthService {
     return response;
   }
 
-  Future<supabase.AuthResponse> signInWithGoogle() async {
+  Future<bool> signInWithGoogle() async {
     return await _supabase.auth.signInWithOAuth(
       supabase.Provider.google,
       redirectTo: 'io.supabase.waste_logistics://auth-callback',
