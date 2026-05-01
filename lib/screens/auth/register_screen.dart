@@ -5,6 +5,10 @@ import 'package:waste_logistics/models/user.dart';
 import 'package:waste_logistics/services/auth_service.dart';
 import 'package:waste_logistics/theme/app_theme.dart';
 
+final authServiceProvider = Provider<AuthService>((ref) {
+  return AuthService();
+});
+
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 

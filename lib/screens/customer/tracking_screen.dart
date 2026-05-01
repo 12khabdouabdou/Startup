@@ -6,6 +6,10 @@ import 'package:waste_logistics/models/order.dart';
 import 'package:waste_logistics/services/order_service.dart';
 import 'package:waste_logistics/theme/app_theme.dart';
 
+final orderServiceProvider = Provider<OrderService>((ref) {
+  return OrderService();
+});
+
 class TrackingScreen extends ConsumerStatefulWidget {
   final String orderId;
 
