@@ -65,7 +65,7 @@ class PaymentService {
   Future<void> _refundPaymentBackend(String paymentId) async {
   }
 
-  double calculateServiceFee(double amount) {
+  Future<double> calculateServiceFee(double amount) async {
     const double serviceFeeRate = 0.05;
     const double minimumFee = 2.0;
     final fee = amount * serviceFeeRate;
