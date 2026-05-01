@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:waste_logistics/models/user.dart';
 import 'package:waste_logistics/services/auth_service.dart';
 import 'package:waste_logistics/theme/app_theme.dart';
 

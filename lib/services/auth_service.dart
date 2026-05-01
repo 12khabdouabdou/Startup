@@ -1,14 +1,14 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import 'package:waste_logistics/models/user.dart';
 
 class AuthService {
-  final SupabaseClient _supabase = Supabase.instance.client;
+  final supabase.SupabaseClient _supabase = supabase.Supabase.instance.client;
 
-  User? get currentUser => _supabase.auth.currentUser;
+  supabase.User? get currentUser => _supabase.auth.currentUser;
 
-  Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
+  Stream<supabase.AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
 
-  Future<AuthResponse> signInWithEmailAndPassword(
+  Future<supabase.AuthResponse> signInWithEmailAndPassword(
     String email,
     String password,
   ) async {
@@ -18,7 +18,7 @@ class AuthService {
     );
   }
 
-  Future<AuthResponse> registerWithEmailAndPassword({
+  Future<supabase.AuthResponse> registerWithEmailAndPassword({
     required String email,
     required String password,
     required String name,
@@ -57,9 +57,9 @@ class AuthService {
     return response;
   }
 
-  Future<AuthResponse> signInWithGoogle() async {
+  Future<supabase.AuthResponse> signInWithGoogle() async {
     return await _supabase.auth.signInWithOAuth(
-      Provider.google,
+      supabase.Provider.google,
       redirectTo: 'io.supabase.waste_logistics://auth-callback',
     );
   }
