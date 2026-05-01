@@ -50,7 +50,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final user = authService.currentUser;
 
     if (user != null) {
-      final userData = await authService.getUserData(user.uid);
+      final userData = await authService.getUserData(user.id);
       if (userData != null) {
         _navigateBasedOnUserType(userData.userType);
         return;
