@@ -6,24 +6,26 @@ on:
       - main
       - master
     paths:
-      - 'ecoroute**'
+      - 'ecoroute/**'
   pull_request:
     branches:
       - main
       - master
     paths:
-      - 'ecoroute**'
-  workflow_dispatch: # Enables manual trigger from the Actions tab
+      - 'ecoroute/**'
+  workflow_dispatch: # Enables the manual "Run workflow" button
 
 jobs:
   build:
     name: Build Android APK
     runs-on: ubuntu-latest
     
-    # Set the default working directory for all run commands in this job
+    # IMPORTANT: Linux is case-sensitive! 
+    # If your folders are capitalized (e.g., Startup/EcoRoute), 
+    # you MUST update this path to match exactly.
     defaults:
       run:
-        working-directory: ecoroute
+        working-directory: /ecoroute
 
     steps:
       - name: 📥 Checkout repository
@@ -33,13 +35,13 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17' # Java 17 is recommended for modern Android builds
+          java-version: '17'
 
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true # Caches the Flutter SDK to speed up future runs
+          cache: true
 
       - name: 📦 Install dependencies
         run: flutter pub get
@@ -51,6 +53,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ecoroute-release-apk
-          # The path must be relative to the root of the repository
+          # This path must also match your exact folder capitalization
           path: startup/ecoroute/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
