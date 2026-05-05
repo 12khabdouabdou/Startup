@@ -6,13 +6,13 @@ on:
       - main
       - master
     paths:
-      - 'ecoroute/**'
+      - 'ecoroute**'
   pull_request:
     branches:
       - main
       - master
     paths:
-      - 'ecoroute/**'
+      - 'ecoroute**'
   workflow_dispatch: # Enables the manual "Run workflow" button
 
 jobs:
@@ -25,7 +25,7 @@ jobs:
     # you MUST update this path to match exactly.
     defaults:
       run:
-        working-directory: /ecoroute
+        working-directory: ecoroute
 
     steps:
       - name: 📥 Checkout repository
