@@ -13,6 +13,7 @@ on:
       - master
     paths:
       - 'startup/ecoroute/**'
+  workflow_dispatch: # Enables manual trigger from the Actions tab
 
 jobs:
   build:
