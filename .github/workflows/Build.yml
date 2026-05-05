@@ -23,7 +23,7 @@ jobs:
     # Set the default working directory for all run commands in this job
     defaults:
       run:
-        working-directory: ./startup/ecoroute
+        working-directory: /ecoroute
 
     steps:
       - name: 📥 Checkout repository
