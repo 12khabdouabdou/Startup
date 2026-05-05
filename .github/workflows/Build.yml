@@ -1,52 +1,55 @@
-name: Flutter Android PFE Build
+name: Build EcoRoute App
 
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
+    paths:
+      - 'startup/ecoroute/**'
   pull_request:
-    branches: [ main, master ]
-  workflow_dispatch: # Allows you to trigger the build manually from GitHub UI
+    branches:
+      - main
+      - master
+    paths:
+      - 'startup/ecoroute/**'
 
 jobs:
   build:
+    name: Build Android APK
     runs-on: ubuntu-latest
+    
+    # Set the default working directory for all run commands in this job
+    defaults:
+      run:
+        working-directory: ./startup/ecoroute
 
     steps:
-      # 1. Checkout your code
-      - name: Checkout Repository
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Set up Java 17 (Stable for Android/Flutter builds)
-      - name: Set up JDK 17
+      - name: ☕ Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'gradle'
+          distribution: 'zulu'
+          java-version: '17' # Java 17 is recommended for modern Android builds
 
-      # 3. Set up Flutter
-      - name: Set up Flutter
+      - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true
+          cache: true # Caches the Flutter SDK to speed up future runs
 
-      # 4. Install specific NDK (r27) requested by your project
-      - name: Install Android NDK
-        run: |
-          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;27.0.12077973"
-
-      # 5. Get Dependencies
-      - name: Install Dependencies
+      - name: 📦 Install dependencies
         run: flutter pub get
 
-      # 6. Build Unsigned Release APK
-      - name: Build APK
+      - name: 🛠️ Build Release APK
         run: flutter build apk --release
 
-      # 7. Upload the APK as an Artifact
-      - name: Upload Build Artifact
+      - name: 🚀 Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: fill-exchange-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: ecoroute-release-apk
+          # The path must be relative to the root of the repository
+          path: startup/ecoroute/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 14
