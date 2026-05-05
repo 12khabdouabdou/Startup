@@ -6,13 +6,13 @@ on:
       - main
       - master
     paths:
-      - 'startup/ecoroute/**'
+      - 'ecoroute**'
   pull_request:
     branches:
       - main
       - master
     paths:
-      - 'startup/ecoroute/**'
+      - 'ecoroute**'
   workflow_dispatch: # Enables manual trigger from the Actions tab
 
 jobs:
@@ -23,7 +23,7 @@ jobs:
     # Set the default working directory for all run commands in this job
     defaults:
       run:
-        working-directory: /ecoroute
+        working-directory: ecoroute
 
     steps:
       - name: 📥 Checkout repository
