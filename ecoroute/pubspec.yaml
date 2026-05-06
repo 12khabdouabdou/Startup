@@ -67,7 +67,7 @@ dependencies:
   printing: ^5.13.4
 
   # Utilities
-  intl: ^0.19.0
+  intl: ^0.20.0
   uuid: ^4.5.1
   connectivity_plus: ^6.1.4
   collection: ^1.18.0
