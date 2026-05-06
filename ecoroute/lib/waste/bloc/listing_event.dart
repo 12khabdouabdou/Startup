@@ -1,17 +1,17 @@
 import 'package:equatable/equatable.dart';
 
-abstract class ListingEvent extends Equatable {
+sealed class ListingEvent extends Equatable {
   const ListingEvent();
 
   @override
   List<Object?> get props => [];
 }
 
-class ListingLoadAll extends ListingEvent {
+final class ListingLoadAll extends ListingEvent {
   const ListingLoadAll();
 }
 
-class ListingLoadById extends ListingEvent {
+final class ListingLoadById extends ListingEvent {
   final String listingId;
 
   const ListingLoadById(this.listingId);
@@ -20,7 +20,7 @@ class ListingLoadById extends ListingEvent {
   List<Object?> get props => [listingId];
 }
 
-class ListingCreate extends ListingEvent {
+final class ListingCreate extends ListingEvent {
   final Map<String, dynamic> listingData;
 
   const ListingCreate(this.listingData);
@@ -29,7 +29,7 @@ class ListingCreate extends ListingEvent {
   List<Object?> get props => [listingData];
 }
 
-class ListingUpdate extends ListingEvent {
+final class ListingUpdate extends ListingEvent {
   final String listingId;
   final Map<String, dynamic> updates;
 
@@ -39,20 +39,11 @@ class ListingUpdate extends ListingEvent {
   List<Object?> get props => [listingId, updates];
 }
 
-class ListingDelete extends ListingEvent {
+final class ListingDelete extends ListingEvent {
   final String listingId;
 
   const ListingDelete(this.listingId);
 
   @override
   List<Object?> get props => [listingId];
-}
-
-class ListingFilter extends ListingEvent {
-  final String wasteType;
-
-  const ListingFilter(this.wasteType);
-
-  @override
-  List<Object?> get props => [wasteType];
 }

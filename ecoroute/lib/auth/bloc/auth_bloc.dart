@@ -1,72 +1,86 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'auth_bloc.dart';
+import '../../core/models/user_model.dart';
+import '../../auth/repository/auth_repository.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  AuthBloc() : super(const AuthInitial()) {
+  final AuthRepository _authRepository;
+
+  AuthBloc(this._authRepository) : super(const AuthInitial()) {
     on<AuthLoginRequested>(_onLogin);
     on<AuthSignUpRequested>(_onSignUp);
     on<AuthLogoutRequested>(_onLogout);
     on<AuthCheckRequested>(_onCheck);
   }
 
-  Future<void> _onLogin(AuthLoginRequested event, Emitter<AuthState> emit) async {
+  Future<void> _onLogin(
+    AuthLoginRequested event,
+    Emitter<AuthState> emit,
+  ) async {
     try {
       emit(const AuthLoading());
-      // TODO: Implement actual Supabase login
-      await Future.delayed(const Duration(seconds: 1));
-      
-      // Mock successful login
-      final user = UserModel(
-        id: '1',
-        email: event.email,
-        role: 'developer',
+      final user = await _authRepository.login(
+        event.email,
+        event.password,
       );
-      
-      emit(AuthAuthenticated(user));
-    } catch (e) {
+      if (user != null) {
+        emit(AuthAuthenticated(user));
+      } else {
+        emit(const AuthError('Invalid credentials'));
+      }
+    } on Exception catch (e) {
       emit(AuthError(e.toString()));
     }
   }
 
-  Future<void> _onSignUp(AuthSignUpRequested event, Emitter<AuthState> emit) async {
+  Future<void> _onSignUp(
+    AuthSignUpRequested event,
+    Emitter<AuthState> emit,
+  ) async {
     try {
       emit(const AuthLoading());
-      // TODO: Implement actual Supabase signup
-      await Future.delayed(const Duration(seconds: 1));
-      
-      // Mock successful signup
-      final user = UserModel(
-        id: '1',
-        email: event.email,
-        role: event.role,
+      final user = await _authRepository.signUp(
+        event.email,
+        event.password,
+        event.role,
       );
-      
-      emit(AuthAuthenticated(user));
-    } catch (e) {
+      if (user != null) {
+        emit(AuthAuthenticated(user));
+      } else {
+        emit(const AuthError('Sign up failed'));
+      }
+    } on Exception catch (e) {
       emit(AuthError(e.toString()));
     }
   }
 
-  Future<void> _onLogout(AuthLogoutRequested event, Emitter<AuthState> emit) async {
+  Future<void> _onLogout(
+    AuthLogoutRequested event,
+    Emitter<AuthState> emit,
+  ) async {
     try {
-      // TODO: Implement actual Supabase logout
-      await Future.delayed(const Duration(milliseconds: 500));
+      await _authRepository.logout();
       emit(const AuthUnauthenticated());
-    } catch (e) {
+    } on Exception catch (e) {
       emit(AuthError(e.toString()));
     }
   }
 
-  Future<void> _onCheck(AuthCheckRequested event, Emitter<AuthState> emit) async {
+  Future<void> _onCheck(
+    AuthCheckRequested event,
+    Emitter<AuthState> emit,
+  ) async {
     try {
       emit(const AuthLoading());
-      // TODO: Check if user is already logged in
-      await Future.delayed(const Duration(milliseconds: 500));
-      emit(const AuthUnauthenticated());
-    } catch (e) {
+      final user = await _authRepository.getCurrentUser();
+      if (user != null) {
+        emit(AuthAuthenticated(user));
+      } else {
+        emit(const AuthUnauthenticated());
+      }
+    } on Exception catch (e) {
       emit(AuthError(e.toString()));
     }
   }

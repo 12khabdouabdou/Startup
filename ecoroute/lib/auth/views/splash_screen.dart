@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../bloc/auth_bloc.dart';
+import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -20,29 +21,18 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkAuth() async {
+    context.read<AuthBloc>().add(const AuthCheckRequested());
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 
-    final authBloc = context.read<AuthBloc>();
-    final authState = authBloc.state;
-
-    if (authState is AuthAuthenticated) {
-      _navigateByRole(authState.user.role);
-    } else {
-      context.go('/login');
-    }
-  }
-
-  void _navigateByRole(String role) {
-    switch (role) {
-      case 'developer':
-        context.go('/developer');
-      case 'hauler':
-        context.go('/hauler');
-      case 'recycler':
-        context.go('/recycler');
-      case 'admin':
-        context.go('/admin');
+    final authState = context.read<AuthBloc>().state;
+    switch (authState) {
+      case AuthAuthenticated(:final user):
+        context.go('/${user.role}');
+      case AuthUnauthenticated():
+        context.go('/login');
+      case AuthError():
+        context.go('/login');
       default:
         context.go('/login');
     }
@@ -72,16 +62,16 @@ class _SplashScreenState extends State<SplashScreen> {
             Text(
               'EcoRoute',
               style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
               'Construction Waste Logistics',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.secondary,
-              ),
+                    color: Theme.of(context).colorScheme.secondary,
+                  ),
             ),
           ],
         ),

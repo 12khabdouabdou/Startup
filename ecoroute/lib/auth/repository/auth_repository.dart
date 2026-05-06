@@ -1,49 +1,42 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../core/models/user_model.dart';
 import '../../core/network/supabase_client.dart';
-import '../bloc/auth_state.dart';
 
 class AuthRepository {
   final SupabaseClientInstance _supabase = SupabaseClientInstance();
 
   Future<UserModel?> login(String email, String password) async {
-    try {
-      final response = await _supabase.client.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
+    final response = await _supabase.client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
 
-      if (response.user != null) {
-        return UserModel(
-          id: response.user!.id,
-          email: response.user!.email ?? email,
-          role: response.user!.userMetadata?['role'] ?? 'developer',
-        );
-      }
-      return null;
-    } catch (e) {
-      throw Exception('Login failed: $e');
+    if (response.user != null) {
+      return UserModel(
+        id: response.user!.id,
+        email: response.user!.email ?? email,
+        role: response.user!.userMetadata?['role'] ?? 'developer',
+      );
     }
+    return null;
   }
 
   Future<UserModel?> signUp(String email, String password, String role) async {
-    try {
-      final response = await _supabase.client.auth.signUp(
-        email: email,
-        password: password,
-        data: {'role': role},
-      );
+    final response = await _supabase.client.auth.signUp(
+      email: email,
+      password: password,
+      data: {'role': role},
+    );
 
-      if (response.user != null) {
-        return UserModel(
-          id: response.user!.id,
-          email: response.user!.email ?? email,
-          role: role,
-        );
-      }
-      return null;
-    } catch (e) {
-      throw Exception('Sign up failed: $e');
+    if (response.user != null) {
+      return UserModel(
+        id: response.user!.id,
+        email: response.user!.email ?? email,
+        role: role,
+      );
     }
+    return null;
   }
 
   Future<void> logout() async {
@@ -62,5 +55,6 @@ class AuthRepository {
     return null;
   }
 
-  Stream<User?> get authStateChanges => _supabase.client.auth.onAuthStateChange.map((data) => data.user);
+  Stream<AuthStateChange> get authStateChanges =>
+      _supabase.client.auth.onAuthStateChange;
 }

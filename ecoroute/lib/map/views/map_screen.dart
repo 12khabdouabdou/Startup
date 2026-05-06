@@ -5,11 +5,13 @@ import 'package:go_router/go_router.dart';
 
 class MapScreen extends StatefulWidget {
   final bool isPickerMode;
-  final Function(LatLng location)? onLocationSelected;
+  final LatLng? initialPosition;
+  final void Function(LatLng location)? onLocationSelected;
 
   const MapScreen({
     super.key,
     this.isPickerMode = false,
+    this.initialPosition,
     this.onLocationSelected,
   });
 
@@ -20,36 +22,26 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
   LatLng? _selectedLocation;
-  bool _isDarkMode = false;
+
+  static const _defaultCenter = LatLng(51.5074, -0.1278);
 
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation();
-  }
-
-  Future<void> _getCurrentLocation() async {
-    // TODO: Implement actual geolocation
-    // For now, use a default location (London)
-    final location = LatLng(51.5074, -0.1278);
-    _mapController.move(location, 13);
-    if (widget.isPickerMode) {
-      setState(() => _selectedLocation = location);
-    }
+    _selectedLocation = widget.initialPosition;
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    _isDarkMode = isDark;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Map'),
+        title: Text(widget.isPickerMode ? 'Pick Location' : 'Map'),
         actions: [
           IconButton(
             icon: const Icon(Icons.my_location),
-            onPressed: _getCurrentLocation,
+            onPressed: _centerOnUserLocation,
           ),
           if (widget.isPickerMode)
             IconButton(
@@ -62,25 +54,31 @@ class _MapScreenState extends State<MapScreen> {
         children: [
           FlutterMap(
             mapController: _mapController,
-            options: const MapOptions(
-              center: LatLng(51.5074, -0.1278),
-              zoom: 13,
+            options: MapOptions(
+              initialCenter: _selectedLocation ?? _defaultCenter,
+              initialZoom: 13,
+              onTap: (tapPosition, point) {
+                if (widget.isPickerMode) {
+                  setState(() => _selectedLocation = point);
+                }
+              },
             ),
             children: [
               TileLayer(
-                urlTemplate: _isDarkMode
-                    ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}.png'
-                    : 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                urlTemplate: isDark
+                    ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
+                    : 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
                 userAgentPackageName: 'com.ecoroute.app',
               ),
-              if (widget.isPickerMode && _selectedLocation != null)
+              if (_selectedLocation != null)
                 MarkerLayer(
                   markers: [
                     Marker(
+                      key: ValueKey(_selectedLocation),
                       width: 60,
                       height: 60,
                       point: _selectedLocation!,
-                      builder: (ctx) => const Icon(
+                      child: const Icon(
                         Icons.location_on,
                         size: 60,
                         color: Colors.red,
@@ -88,7 +86,6 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                   ],
                 ),
-              // Add listing markers here when not in picker mode
             ],
           ),
           if (widget.isPickerMode)
@@ -102,7 +99,7 @@ class _MapScreenState extends State<MapScreen> {
                   child: Text(
                     _selectedLocation != null
                         ? 'Selected: ${_selectedLocation!.latitude.toStringAsFixed(4)}, ${_selectedLocation!.longitude.toStringAsFixed(4)}'
-                        : 'Drag map to select location',
+                        : 'Tap map to select location',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
@@ -113,10 +110,22 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  Future<void> _centerOnUserLocation() async {
+    // TODO: Use geolocator to get real position
+    const location = _defaultCenter;
+    _mapController.move(location, 13);
+    if (widget.isPickerMode) {
+      setState(() => _selectedLocation = location);
+    }
+  }
+
   void _confirmSelection() {
-    if (_selectedLocation != null && widget.onLocationSelected != null) {
-      widget.onLocationSelected!(_selectedLocation!);
-      context.pop(_selectedLocation);
+    if (_selectedLocation != null) {
+      widget.onLocationSelected?.call(_selectedLocation!);
+      context.pop({
+        'lat': _selectedLocation!.latitude,
+        'lng': _selectedLocation!.longitude,
+      });
     }
   }
 }

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../bloc/listing_bloc.dart';
 import '../bloc/listing_event.dart';
+import '../bloc/listing_state.dart';
+import '../models/waste_listing_model.dart';
 
 class CreateListingScreen extends StatefulWidget {
   const CreateListingScreen({super.key});
@@ -17,8 +20,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   final _quantityController = TextEditingController();
   final _addressController = TextEditingController();
   final _descriptionController = TextEditingController();
-  
-  String _selectedWasteType = 'concrete';
+
+  WasteType _selectedWasteType = WasteType.concrete;
   String _selectedUnit = 'tons';
   double? _latitude;
   double? _longitude;
@@ -48,18 +51,23 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Step indicator
-            _buildStepIndicator(),
-            const SizedBox(height: 24),
-            
-            // Waste type selection
-            Text('1. Select Waste Type', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              '1. Select Waste Type',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             _buildWasteTypeGrid(),
             const SizedBox(height: 24),
-            
-            // Quantity
-            Text('2. Quantity', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              '2. Quantity',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -74,7 +82,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     ),
                     validator: (value) {
                       if (value?.isEmpty ?? true) return 'Required';
-                      if (double.tryParse(value!) == null) return 'Invalid number';
+                      if (double.tryParse(value!) == null) {
+                        return 'Invalid number';
+                      }
                       return null;
                     },
                   ),
@@ -83,42 +93,53 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     value: _selectedUnit,
-                    items: ['tons', 'm³', 'kg'].map((unit) => DropdownMenuItem(value: unit, child: Text(unit))).toList(),
-                    onChanged: (value) => setState(() => _selectedUnit = value!),
+                    items: ['tons', 'm³', 'kg']
+                        .map(
+                          (unit) => DropdownMenuItem(
+                            value: unit,
+                            child: Text(unit),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setState(() => _selectedUnit = value!),
                     decoration: const InputDecoration(labelText: 'Unit'),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 24),
-            
-            // Location
-            Text('3. Location', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              '3. Location',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _addressController,
-              decoration: const InputDecoration(
+              readOnly: true,
+              decoration: InputDecoration(
                 labelText: 'Address',
-                prefixIcon: Icon(Icons.location_on),
-                suffixIcon: Icon(Icons.map, color: Colors.blue),
+                prefixIcon: const Icon(Icons.location_on),
+                suffixIcon: Icon(
+                  Icons.map,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
-              validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
-              onTap: () async {
-                // TODO: Open map picker
-                final result = await Navigator.pushNamed(context, '/map-picker');
-                if (result != null) {
-                  setState(() {
-                    _latitude = result['lat'];
-                    _longitude = result['lng'];
-                    _addressController.text = result['address'];
-                  });
-                }
-              },
+              validator: (value) =>
+                  value?.isEmpty ?? true ? 'Required' : null,
+              onTap: _openMapPicker,
             ),
             const SizedBox(height: 24),
-            
-            // Description
-            Text('4. Description (Optional)', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              '4. Description (Optional)',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _descriptionController,
@@ -129,16 +150,21 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               ),
             ),
             const SizedBox(height: 32),
-            
-            // Submit button
             BlocBuilder<ListingBloc, ListingState>(
               builder: (context, state) {
                 final isLoading = state is ListingLoading;
                 return ElevatedButton(
                   onPressed: isLoading ? null : _submitListing,
                   child: isLoading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Padding(padding: EdgeInsets.all(12), child: Text('Create Listing')),
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Text('Create Listing'),
+                        ),
                 );
               },
             ),
@@ -149,40 +175,14 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     );
   }
 
-  Widget _buildStepIndicator() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildStepDot(1, true),
-        const SizedBox(width: 8),
-        _buildStepDot(2, false),
-        const SizedBox(width: 8),
-        _buildStepDot(3, false),
-        const SizedBox(width: 8),
-        _buildStepDot(4, false),
-      ],
-    );
-  }
-
-  Widget _buildStepDot(int step, bool active) {
-    return Container(
-      width: 12,
-      height: 12,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: active ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
-      ),
-    );
-  }
-
   Widget _buildWasteTypeGrid() {
-    final wasteTypes = [
-      {'type': 'concrete', 'label': 'Concrete', 'icon': '🧱'},
-      {'type': 'wood', 'label': 'Wood', 'icon': '🪵'},
-      {'type': 'metal', 'label': 'Metal', 'icon': '🔩'},
-      {'type': 'soil', 'label': 'Soil', 'icon': '🏔️'},
-      {'type': 'mixed', 'label': 'Mixed', 'icon': '📦'},
-      {'type': 'hazardous', 'label': 'Hazardous', 'icon': '🛢️'},
+    const wasteTypes = [
+      _WasteTypeEntry(WasteType.concrete, 'Concrete', '🧱'),
+      _WasteTypeEntry(WasteType.wood, 'Wood', '🪵'),
+      _WasteTypeEntry(WasteType.metal, 'Metal', '🔩'),
+      _WasteTypeEntry(WasteType.soil, 'Soil', '🏔️'),
+      _WasteTypeEntry(WasteType.mixed, 'Mixed', '📦'),
+      _WasteTypeEntry(WasteType.hazardous, 'Hazardous', '🛢️'),
     ];
 
     return GridView.builder(
@@ -196,20 +196,20 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       ),
       itemCount: wasteTypes.length,
       itemBuilder: (context, index) {
-        final wasteType = wasteTypes[index];
-        final isSelected = _selectedWasteType == wasteType['type'];
-        
+        final entry = wasteTypes[index];
+        final isSelected = _selectedWasteType == entry.type;
+
         return GestureDetector(
-          onTap: () => setState(() => _selectedWasteType = wasteType['type']!),
+          onTap: () => setState(() => _selectedWasteType = entry.type),
           child: Container(
             decoration: BoxDecoration(
-              color: isSelected 
-                  ? Theme.of(context).colorScheme.primaryContainer 
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primaryContainer
                   : Theme.of(context).cardTheme.color,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected 
-                    ? Theme.of(context).colorScheme.primary 
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
                     : Colors.grey.shade300,
                 width: 2,
               ),
@@ -217,15 +217,36 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(wasteType['icon']!, style: const TextStyle(fontSize: 32)),
+                Text(entry.icon, style: const TextStyle(fontSize: 32)),
                 const SizedBox(height: 8),
-                Text(wasteType['label']!, textAlign: TextAlign.center),
+                Text(entry.label, textAlign: TextAlign.center),
               ],
             ),
           ),
         );
       },
     );
+  }
+
+  Future<void> _openMapPicker() async {
+    final result = await context.push<Map<String, dynamic>>(
+      '/map',
+      extra: {
+        'isPicker': true,
+        'initialPosition': _latitude != null && _longitude != null
+            ? LatLng(_latitude!, _longitude!)
+            : null,
+      },
+    );
+
+    if (result != null) {
+      setState(() {
+        _latitude = result['lat'] as double?;
+        _longitude = result['lng'] as double?;
+        _addressController.text =
+            '${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)}';
+      });
+    }
   }
 
   void _submitListing() {
@@ -237,18 +258,27 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         return;
       }
 
-      context.read<ListingBloc>().add(ListingCreate({
-        'wasteType': _selectedWasteType,
-        'quantity': double.parse(_quantityController.text),
-        'unit': _selectedUnit,
-        'address': _addressController.text,
-        'latitude': _latitude,
-        'longitude': _longitude,
-        'description': _descriptionController.text,
-      }));
-      
-      // Navigate back on success
+      context.read<ListingBloc>().add(
+            ListingCreate({
+              'wasteType': _selectedWasteType.name,
+              'quantity': double.parse(_quantityController.text),
+              'unit': _selectedUnit,
+              'address': _addressController.text,
+              'latitude': _latitude,
+              'longitude': _longitude,
+              'description': _descriptionController.text,
+            }),
+          );
+
       context.pop();
     }
   }
+}
+
+class _WasteTypeEntry {
+  final WasteType type;
+  final String label;
+  final String icon;
+
+  const _WasteTypeEntry(this.type, this.label, this.icon);
 }

@@ -1,22 +1,23 @@
 import 'package:equatable/equatable.dart';
+
 import '../models/waste_listing_model.dart';
 
-abstract class ListingState extends Equatable {
+sealed class ListingState extends Equatable {
   const ListingState();
 
   @override
   List<Object?> get props => [];
 }
 
-class ListingInitial extends ListingState {
+final class ListingInitial extends ListingState {
   const ListingInitial();
 }
 
-class ListingLoading extends ListingState {
+final class ListingLoading extends ListingState {
   const ListingLoading();
 }
 
-class ListingLoaded extends ListingState {
+final class ListingLoaded extends ListingState {
   final List<WasteListingModel> listings;
 
   const ListingLoaded(this.listings);
@@ -25,7 +26,7 @@ class ListingLoaded extends ListingState {
   List<Object?> get props => [listings];
 }
 
-class ListingDetailLoaded extends ListingState {
+final class ListingDetailLoaded extends ListingState {
   final WasteListingModel listing;
 
   const ListingDetailLoaded(this.listing);
@@ -34,7 +35,7 @@ class ListingDetailLoaded extends ListingState {
   List<Object?> get props => [listing];
 }
 
-class ListingError extends ListingState {
+final class ListingError extends ListingState {
   final String message;
 
   const ListingError(this.message);

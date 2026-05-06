@@ -1,5 +1,12 @@
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  errors:
+    invalid_annotation_target: ignore
+  exclude:
+    - '**/*.freezed.dart'
+    - '**/*.g.dart'
+
 linter:
   rules:
     prefer_const_constructors: true
@@ -8,3 +15,6 @@ linter:
     prefer_single_quotes: true
     prefer_final_locals: true
     sort_pub_dependencies: true
+    require_trailing_commas: true
+    sized_box_for_whitespace: true
+    use_key_in_widget_constructors: true
