@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 import '../../core/models/user_model.dart';
 import '../../core/network/supabase_client.dart';
@@ -55,6 +55,6 @@ class AuthRepository {
     return null;
   }
 
-  Stream<AuthStateChange> get authStateChanges =>
+  Stream<supabase.AuthState> get authStateChanges =>
       _supabase.client.auth.onAuthStateChange;
 }

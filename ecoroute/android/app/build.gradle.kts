@@ -7,6 +7,7 @@ plugins {
 android {
     namespace = "com.ecoroute.app"
     compileSdk = flutter.compileSdkVersion
+    ndkVersion = "28.2.13676358"
 
     defaultConfig {
         applicationId = "com.ecoroute.app"

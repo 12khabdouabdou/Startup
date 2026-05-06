@@ -43,9 +43,11 @@ class AppTheme {
       centerTitle: true,
     ),
     cardTheme: CardTheme(
-      color: surfaceLight,
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      data: const CardThemeData(
+        color: surfaceLight,
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: surfaceLight,
@@ -69,15 +71,15 @@ class AppTheme {
       fillColor: surfaceLight,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: dividerLight),
+        borderSide: const BorderSide(color: dividerLight),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: dividerLight),
+        borderSide: const BorderSide(color: dividerLight),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: primaryLight),
+        borderSide: const BorderSide(color: primaryLight),
       ),
     ),
   );
@@ -100,9 +102,11 @@ class AppTheme {
       centerTitle: true,
     ),
     cardTheme: CardTheme(
-      color: surfaceDark,
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      data: const CardThemeData(
+        color: surfaceDark,
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: surfaceDark,
@@ -126,15 +130,15 @@ class AppTheme {
       fillColor: surfaceDark,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: dividerDark),
+        borderSide: const BorderSide(color: dividerDark),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: dividerDark),
+        borderSide: const BorderSide(color: dividerDark),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: primaryDark),
+        borderSide: const BorderSide(color: primaryDark),
       ),
     ),
   );
