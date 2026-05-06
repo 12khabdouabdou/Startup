@@ -39,6 +39,10 @@ dependencies:
 
   # Code Generation
   freezed_annotation: ^2.4.4
+<<<<<<< HEAD
+=======
+  
+>>>>>>> 0a4f93564eae818861989a429060c8fd64ca38d7
 
   # Dependency Injection
   get_it: ^8.0.3
@@ -75,10 +79,18 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+<<<<<<< HEAD
   # Code generation - run locally, not needed in CI
   # build_runner: ^2.4.6
   # freezed: ^2.4.7
   # json_serializable: ^6.9.0
+=======
+  # build_runner: ^2.4.6
+   #freezed: ^2.4.7
+   #json_serializable: '>=6.6.0 <6.7.0'
+  
+  
+>>>>>>> 0a4f93564eae818861989a429060c8fd64ca38d7
 
 flutter:
   uses-material-design: true
