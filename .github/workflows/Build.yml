@@ -1,0 +1,55 @@
+name: Build EcoRoute App
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'ecoroute**'
+  pull_request:
+    branches:
+      - main
+      - master
+    paths:
+      - 'ecoroute**'
+  workflow_dispatch: # Enables manual trigger from the Actions tab
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    
+    # Set the default working directory for all run commands
+    defaults:
+      run:
+        working-directory: ecoroute
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17' # Java 17 is recommended for modern Android builds
+
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true # Caches the Flutter SDK to speed up future runs
+
+      - name: 📦 Install dependencies
+        run: flutter pub get
+
+      - name: 🛠️ Build Release APK
+        run: flutter build apk --release
+
+      - name: 🚀 Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecoroute-release-apk
+          path: startup/ecoroute/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 14
