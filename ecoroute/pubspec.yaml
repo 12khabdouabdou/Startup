@@ -37,8 +37,7 @@ dependencies:
   # Networking
   dio: ^5.7.0
 
-  # Code Generation
-  freezed_annotation: ^2.4.4
+  # Code Generation (no longer needed - models are plain Dart classes)
 
   # Dependency Injection
   get_it: ^8.0.3
