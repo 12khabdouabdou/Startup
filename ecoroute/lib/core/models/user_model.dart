@@ -39,5 +39,5 @@ class UserModel {
         'created_at': createdAt?.toIso8601String(),
       };
 
-  static const empty = UserModel(id: '', email: '', role: 'developer');
+  static UserModel empty() => const UserModel(id: '', email: '', role: 'developer');
 }
