@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'user_management_screen.dart';
 import 'payments_overview_screen.dart';
 import 'audit_log_screen.dart';
+import '../shared/app_drawer.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -10,6 +11,7 @@ class AdminDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Admin Dashboard')),
+      drawer: const AppDrawer(),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: GridView.count(
@@ -29,7 +31,19 @@ class AdminDashboard extends StatelessWidget {
 
   Widget _buildCard(IconData icon, String label, VoidCallback onTap) {
     return Card(
-      child: InkWell(onTap: onTap, child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 48), const SizedBox(height: 8), Text(label)]))),
+      child: InkWell(
+        onTap: onTap,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 48),
+              const SizedBox(height: 8),
+              Text(label),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

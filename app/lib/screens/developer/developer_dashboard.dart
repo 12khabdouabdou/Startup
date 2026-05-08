@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'create_post_screen.dart';
 import 'developer_posts_screen.dart';
 import 'developer_payments_screen.dart';
+import '../shared/app_drawer.dart';
 
 class DeveloperDashboard extends StatelessWidget {
   const DeveloperDashboard({super.key});
@@ -9,6 +11,7 @@ class DeveloperDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Developer Dashboard')),
+      drawer: const AppDrawer(),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: GridView.count(
@@ -16,7 +19,7 @@ class DeveloperDashboard extends StatelessWidget {
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
           children: [
-            _buildCard(Icons.add_box, 'Create Post', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreatePostScreen()))),
+            _buildCard(Icons.add_circle, 'Create Post', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreatePostScreen()))),
             _buildCard(Icons.list, 'My Posts', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyPostsScreen()))),
             _buildCard(Icons.payment, 'Payments', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DeveloperPaymentsScreen()))),
           ],
@@ -29,7 +32,16 @@ class DeveloperDashboard extends StatelessWidget {
     return Card(
       child: InkWell(
         onTap: onTap,
-        child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 48), const SizedBox(height: 8), Text(label)]),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 48),
+              const SizedBox(height: 8),
+              Text(label),
+            ],
+          ),
+        ),
       ),
     );
   }

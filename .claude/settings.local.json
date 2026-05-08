@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(flutter --version)",
+      "Read(//tmp/**)",
+      "Bash(wget -q https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.27.0-stable.tar.xz)",
+      "Bash(tar xf *)",
+      "Bash(mv flutter *)",
+      "Bash(echo 'export PATH=$PATH:/opt/flutter/bin')",
+      "Bash(curl -sL https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.27.0-stable.tar.xz -o flutter.tar.xz)",
+      "Bash(export PATH=\"$PATH:/opt/flutter/bin\")"
     ]
   }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'available_jobs_screen.dart';
 import 'my_jobs_screen.dart';
 import 'tracking_screen.dart';
-import '../shared/profile_screen.dart';
+import '../shared/app_drawer.dart';
 
 class HaulerDashboard extends StatelessWidget {
   const HaulerDashboard({super.key});
@@ -10,15 +10,8 @@ class HaulerDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Hauler Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Hauler Dashboard')),
+      drawer: const AppDrawer(),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: GridView.count(

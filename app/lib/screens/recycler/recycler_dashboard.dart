@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'browse_waste_screen.dart';
 import 'waste_map_screen.dart';
 import 'my_selections_screen.dart';
-import 'payment_screen.dart';
-import '../shared/profile_screen.dart';
+import '../shared/app_drawer.dart';
 
 class RecyclerDashboard extends StatelessWidget {
   const RecyclerDashboard({super.key});
@@ -11,15 +10,8 @@ class RecyclerDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Recycler Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Recycler Dashboard')),
+      drawer: const AppDrawer(),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: GridView.count(
