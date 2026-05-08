@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_fluto.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/auth/login_screen.dart';
-import 'screens/shared/splash_screen.dart';
+import 'screens/shared/role_router.dart';
+import 'utils/env.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
-    url: const String.fromEnvironment('SUPABASE_URL', defaultValue: 'https://your-project-url.supabase.co'),
-    anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'your-anon-key'),
+    url: Env.supabaseUrl,
+    anonKey: Env.supabaseAnonKey,
   );
   runApp(const MyApp());
 }
