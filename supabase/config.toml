@@ -2,7 +2,9 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-project_id = "startup"
+# project_id is the local workspace name for `supabase start` (not the live project ref)
+# your live project ref is: jrfwxnwoeetqjbvicokb
+project_id = "cwl"
 
 [api]
 enabled = true
