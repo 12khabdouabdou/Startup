@@ -13,17 +13,43 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
-    // TODO: Implement edge function logic
-    return new Response(JSON.stringify({ message: 'Not implemented yet' }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+
+    const authHeader = req.headers.get('Authorization')!
+    const { data: { user } } = await supabase.auth.getUser(authHeader)
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    const { data: adminProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    if (adminProfile?.role !== 'admin') {
+      return new Response(JSON.stringify({ error: 'Admin only' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    const { payment_id, refund_amount, refund_reason } = await req.json()
+
+    const { data, error } = await supabase
+      .from('payment_refunds')
+      .insert({
+        payment_id,
+        refund_amount,
+        refund_reason,
+        refunded_by: user.id,
+        status: 'pending',
+      })
+      .select()
+      .single()
+    if (error) throw error
+
+    await supabase.from('platform_audit_log').insert({
+      user_id: user.id,
+      action_type: 'refund',
+      details: { payment_id, refund_amount, refund_reason },
     })
+
+    return new Response(JSON.stringify({ refund: data }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })

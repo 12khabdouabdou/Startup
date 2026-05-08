@@ -13,17 +13,20 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
-    // TODO: Implement edge function logic
-    return new Response(JSON.stringify({ message: 'Not implemented yet' }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+
+    const { user_id, type, title, body } = await req.json()
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert({ user_id, type, title, body })
+      .select()
+      .single()
+    if (error) throw error
+
+    return new Response(JSON.stringify({ notification: data }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })
